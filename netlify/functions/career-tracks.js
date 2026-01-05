@@ -18,23 +18,103 @@ function jsonResponse(statusCode, body) {
   };
 }
 
-async function callOpenRouter(messages, model, temperature = 0.2) {
-  const headers = {
-    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    'Content-Type': 'application/json',
+// Fallback data when AI times out
+function getFallbackData(level) {
+  return {
+    userStats: {
+      level: level === 'Advanced' ? 10 : level === 'Intermediate' ? 5 : 1,
+      xp: 2500,
+      nextLevelXp: 5000,
+      totalFundsManaged: 1500000,
+      totalAUM: 5000000,
+      careerRank: level === 'Advanced' ? 'Senior Analyst' : level === 'Intermediate' ? 'Junior Analyst' : 'Trainee',
+      specializations: ['Equity Analysis', 'Risk Management']
+    },
+    careerTracks: [
+      {
+        id: 'hedge-fund',
+        title: 'Hedge Fund Manager',
+        description: 'Master quantitative strategies and alternative investments',
+        progress: 35,
+        modules: [
+          { id: 'quant-basics', title: 'Quantitative Basics', completed: true },
+          { id: 'alpha-generation', title: 'Alpha Generation', completed: false },
+          { id: 'risk-parity', title: 'Risk Parity Strategies', completed: false }
+        ]
+      },
+      {
+        id: 'investment-bank',
+        title: 'Investment Banking',
+        description: 'Learn M&A, capital markets, and deal structuring',
+        progress: 20,
+        modules: [
+          { id: 'valuation', title: 'Company Valuation', completed: true },
+          { id: 'dcf-modeling', title: 'DCF Modeling', completed: false },
+          { id: 'deal-execution', title: 'Deal Execution', completed: false }
+        ]
+      },
+      {
+        id: 'venture-capital',
+        title: 'Venture Capital',
+        description: 'Evaluate startups and early-stage investments',
+        progress: 15,
+        modules: [
+          { id: 'startup-eval', title: 'Startup Evaluation', completed: false },
+          { id: 'term-sheets', title: 'Term Sheets', completed: false },
+          { id: 'portfolio-mgmt', title: 'Portfolio Management', completed: false }
+        ]
+      },
+      {
+        id: 'movie-music',
+        title: 'Movie & Music Investments',
+        description: 'Analyze entertainment industry investments',
+        progress: 0,
+        modules: [
+          { id: 'box-office', title: 'Box Office Analysis', completed: false },
+          { id: 'music-royalties', title: 'Music Royalties', completed: false },
+          { id: 'content-valuation', title: 'Content Valuation', completed: false }
+        ]
+      }
+    ],
+    dailyGoals: [
+      { id: 'g1', title: 'Analyze a stock', description: 'Review fundamentals of any equity', xp: 50, completed: false },
+      { id: 'g2', title: 'Check crypto prices', description: 'Monitor BTC, ETH, SOL', xp: 25, completed: false },
+      { id: 'g3', title: 'Read market news', description: 'Stay updated on financial news', xp: 30, completed: false }
+    ],
+    marketSimulations: [
+      { id: 'sim1', title: 'Market Crash Scenario', difficulty: 'Hard', participants: 150, reward: 500 },
+      { id: 'sim2', title: 'Bull Run Strategy', difficulty: 'Medium', participants: 230, reward: 300 }
+    ]
   };
-  if (process.env.SITE_URL) headers['HTTP-Referer'] = process.env.SITE_URL;
-  if (process.env.SITE_NAME) headers['X-Title'] = process.env.SITE_NAME;
+}
 
-  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ model: model || process.env.OPENROUTER_MODEL || 'tngtech/deepseek-r1t2-chimera:free', messages, temperature }),
-  });
-  if (!r.ok) throw new Error(`OpenRouter error ${r.status}`);
-  const json = await r.json();
-  const content = json.choices?.[0]?.message?.content || '';
-  return content;
+async function callOpenRouter(messages, model, temperature = 0.2) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  
+  try {
+    const headers = {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    };
+    if (process.env.SITE_URL) headers['HTTP-Referer'] = process.env.SITE_URL;
+    if (process.env.SITE_NAME) headers['X-Title'] = process.env.SITE_NAME;
+
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: model || process.env.OPENROUTER_MODEL || 'tngtech/deepseek-r1t2-chimera:free', messages, temperature }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error(`OpenRouter error ${r.status}`);
+    const json = await r.json();
+    const content = json.choices?.[0]?.message?.content || '';
+    return content;
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
 }
 
 function tryParseJSON(text) {
@@ -104,11 +184,15 @@ Ensure numbers are realistic and strings ISO-8601 for dates. Do NOT include Mark
     const content = await callOpenRouter([system, user]);
     const parsed = tryParseJSON(content);
     if (!parsed) {
-      return jsonResponse(200, { userStats: { level: 1, xp: 0, nextLevelXp: 1000, totalFundsManaged: 0, totalAUM: 0, careerRank: 'Associate', specializations: [] }, careerTracks: [], dailyGoals: [], marketSimulations: [], raw: content });
+      console.log('[career-tracks] AI returned unparseable content, using fallback');
+      return jsonResponse(200, getFallbackData(level));
     }
     return jsonResponse(200, parsed);
   } catch (e) {
-    console.error('career/tracks error', e);
-    return jsonResponse(500, { error: 'internal_error' });
+    console.error('[career-tracks] Error:', e.message);
+    // Return fallback data on any error (including timeout)
+    const params = event.queryStringParameters || {};
+    const level = (params.level || 'Intermediate').toString();
+    return jsonResponse(200, getFallbackData(level));
   }
 }

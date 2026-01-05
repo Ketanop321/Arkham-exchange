@@ -18,22 +18,91 @@ function jsonResponse(statusCode, body) {
 }
 
 async function callOpenRouter(messages, model, temperature = 0.2) {
-  const headers = {
-    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    'Content-Type': 'application/json',
-  };
-  if (process.env.SITE_URL) headers['HTTP-Referer'] = process.env.SITE_URL;
-  if (process.env.SITE_NAME) headers['X-Title'] = process.env.SITE_NAME;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+  
+  try {
+    const headers = {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    };
+    if (process.env.SITE_URL) headers['HTTP-Referer'] = process.env.SITE_URL;
+    if (process.env.SITE_NAME) headers['X-Title'] = process.env.SITE_NAME;
 
-  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ model: model || process.env.OPENROUTER_MODEL || 'tngtech/deepseek-r1t2-chimera:free', messages, temperature }),
-  });
-  if (!r.ok) throw new Error(`OpenRouter error ${r.status}`);
-  const json = await r.json();
-  const content = json.choices?.[0]?.message?.content || '';
-  return content;
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: model || process.env.OPENROUTER_MODEL || 'tngtech/deepseek-r1t2-chimera:free', messages, temperature }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error(`OpenRouter error ${r.status}`);
+    const json = await r.json();
+    const content = json.choices?.[0]?.message?.content || '';
+    return content;
+  } catch (err) {
+    clearTimeout(timeout);
+    throw err;
+  }
+}
+
+// Fallback data when AI times out
+function getFallbackFeedData() {
+  const now = new Date().toISOString();
+  return {
+    users: [
+      {
+        id: 'user-1',
+        username: 'traderpro',
+        displayName: 'Trader Pro',
+        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+        bio: 'Professional trader with 10+ years experience',
+        verified: true,
+        reputation: { score: 850, rank: 'Elite', badges: ['Top Trader', 'Verified'], level: 8 },
+        stats: { followers: 5200, following: 120, totalReturn: 42.5, winRate: 68, portfolios: 3, copiers: 230 },
+        blockchain: { walletAddress: '0x1234...5678', tokenGating: { requiredTokens: 100, tokenType: 'ARKHAM', hasAccess: true } },
+        social: { isFollowing: false, mutualFollowers: 12, lastActive: now },
+        achievements: []
+      },
+      {
+        id: 'user-2',
+        username: 'cryptoqueen',
+        displayName: 'Crypto Queen',
+        avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
+        bio: 'DeFi enthusiast | NFT collector',
+        verified: true,
+        reputation: { score: 720, rank: 'Pro', badges: ['Early Adopter'], level: 6 },
+        stats: { followers: 3100, following: 89, totalReturn: 38.2, winRate: 62, portfolios: 2, copiers: 145 },
+        blockchain: { walletAddress: '0xabcd...efgh', tokenGating: { requiredTokens: 50, tokenType: 'ARKHAM', hasAccess: true } },
+        social: { isFollowing: true, mutualFollowers: 8, lastActive: now },
+        achievements: []
+      }
+    ],
+    posts: [
+      {
+        id: 'post-1',
+        authorId: 'user-1',
+        content: 'Just went long on BTC at $92k. Strong support level here. 🚀',
+        type: 'trade-alert',
+        timestamp: now,
+        engagement: { likes: 45, comments: 12, shares: 8, hasLiked: false },
+        trade: { symbol: 'BTC', action: 'buy', price: 92000, quantity: 0.5 }
+      },
+      {
+        id: 'post-2',
+        authorId: 'user-2',
+        content: 'My tech portfolio is up 15% this month! Check out my strategy.',
+        type: 'portfolio-share',
+        timestamp: now,
+        engagement: { likes: 32, comments: 7, shares: 5, hasLiked: false },
+        portfolio: { id: 'p1', name: 'Tech Growth', performance: 15.2, value: 125000 }
+      }
+    ],
+    leaderboard: [
+      { rank: 1, userId: 'user-1', metric: 42.5, change: 2.3 },
+      { rank: 2, userId: 'user-2', metric: 38.2, change: -0.5 }
+    ]
+  };
 }
 
 function tryParseJSON(text) {
@@ -69,13 +138,16 @@ export async function handler(event, context) {
       return { statusCode: 200, headers: corsHeaders(), body: '' };
     }
 
-    const system = {
-      role: 'system',
-      content: 'You are a data generator for a social trading network. Output strictly valid JSON only.'
-    };
-    const user = {
-      role: 'user',
-      content: `Generate social trading data with this exact schema:
+    // Try AI generation with timeout fallback
+    let parsed;
+    try {
+      const system = {
+        role: 'system',
+        content: 'You are a data generator for a social trading network. Output strictly valid JSON only.'
+      };
+      const user = {
+        role: 'user',
+        content: `Generate social trading data with this exact schema:
 {
   "users": [
     {
@@ -109,10 +181,14 @@ export async function handler(event, context) {
   "leaderboard": [ { "rank": number, "userId": string, "metric": number, "change": number } ]
 }
 Constraints: 2-4 users, 2-4 posts, 2-3 leaderboard entries. ISO-8601 dates. Realistic numbers. JSON only. No Markdown.`
-    };
+      };
 
-    const content = await callOpenRouter([system, user]);
-    const parsed = tryParseJSON(content) || { users: [], posts: [], leaderboard: [] };
+      const content = await callOpenRouter([system, user]);
+      parsed = tryParseJSON(content) || getFallbackFeedData();
+    } catch (aiError) {
+      console.log('[social-feed] AI timeout/error, using fallback:', aiError.message);
+      parsed = getFallbackFeedData();
+    }
 
     const users = ensureArray(parsed.users).map((u, i) => ({
       id: String(u.id || `user-${i+1}`),

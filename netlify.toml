@@ -7,6 +7,12 @@
   node_bundler = "esbuild"
   directory = "netlify/functions"
 
+# Debug endpoint for env var checking
+[[redirects]]
+  from = "/api/debug/env"
+  to = "/.netlify/functions/debug-env"
+  status = 200
+
 # API redirects - map each API path to its function
 [[redirects]]
   from = "/api/playfab/session"
