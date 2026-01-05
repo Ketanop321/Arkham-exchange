@@ -451,7 +451,7 @@ const VirtualPortfolio: React.FC = () => {
     setUserPortfolios(next);
     setSelectedPortfolio(updated);
     await persistPortfolios(next);
-    showToast(`Added ${qty} ${selectedAsset.symbol} to portfolio!`, 'success');
+    showToast('success', `Added ${qty} ${selectedAsset.symbol} to portfolio!`);
     try { await updatePortfolioValueStat(updated.totalValue); } catch {}
   }
 
@@ -575,7 +575,7 @@ const VirtualPortfolio: React.FC = () => {
                 setUserPortfolios(next);
                 setSelectedPortfolio(np);
                 persistPortfolios(next);
-                showToast('Portfolio created successfully!', 'success');
+                showToast('success', 'Portfolio created successfully!');
               }}
               className="flex items-center space-x-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20"
             >
@@ -690,7 +690,15 @@ const VirtualPortfolio: React.FC = () => {
                     <div className="col-span-2 glass-effect rounded-lg p-6">
                       <div className="text-center py-8">
                         <div className="text-white/60 mb-4">No portfolios found</div>
-                        <button className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20">
+                        <button 
+                          onClick={() => {
+                            const np = createPortfolio();
+                            setUserPortfolios([...userPortfolios, np]);
+                            setSelectedPortfolio(np);
+                            showToast('success', `Portfolio "${np.name}" created! 🎉`);
+                          }}
+                          className="px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20"
+                        >
                           Create Your First Portfolio
                         </button>
                       </div>
