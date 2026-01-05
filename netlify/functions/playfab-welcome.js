@@ -1,6 +1,6 @@
 // Netlify Serverless: Grant initial currency to new players
 // POST: Grants starter PT and GC if player hasn't received welcome bonus
-import { corsHeaders, jsonResponse, optionsResponse, getPfidFromCookie, serverGetUserData, serverUpdateUserData, serverAddCurrency, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getPfidFromCookie, serverGetUserData, serverUpdateUserData, serverAddCurrency, assertPlayFabEnv } from './_utils/playfab.js';
 
 const WELCOME_BONUS = {
   PT: 10, // Premium Tokens to start

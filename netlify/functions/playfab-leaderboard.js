@@ -1,7 +1,7 @@
 // Netlify Serverless: PlayFab leaderboard operations
 // GET: Fetch leaderboard entries
 // POST: Update player statistic
-import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetLeaderboard, serverUpdateStatistic, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetLeaderboard, serverUpdateStatistic, assertPlayFabEnv } from './_utils/playfab.js';
 
 export async function handler(event, context) {
   try {

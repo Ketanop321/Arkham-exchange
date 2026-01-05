@@ -53,8 +53,8 @@ export async function handler(event, context) {
     // Pull live signals from your own APIs
     const [news, crypto, us] = await Promise.all([
       safeFetchJson(`${origin}/.netlify/functions/news?q=${encodeURIComponent('markets OR technology OR crypto OR real estate OR venture capital OR movies OR music')}&limit=12`),
-      safeFetchJson(`${origin}/.netlify/functions/crypto/quotes?ids=bitcoin,ethereum,solana&vs_currency=usd`),
-      safeFetchJson(`${origin}/.netlify/functions/markets/us?symbols=AAPL,MSFT,NVDA,TSLA`),
+      safeFetchJson(`${origin}/.netlify/functions/crypto-quotes?ids=bitcoin,ethereum,solana&vs_currency=usd`),
+      safeFetchJson(`${origin}/.netlify/functions/markets-us?symbols=AAPL,MSFT,NVDA,TSLA`),
     ]);
 
     const signals = {
@@ -122,7 +122,7 @@ For multiplayer mode, create 3-5 subquests where each team member has a specific
 Ensure strings are plain JSON (no markdown).` }
     ];
 
-    const r = await fetch(`${origin}/.netlify/functions/ai/deepseek`, {
+    const r = await fetch(`${origin}/.netlify/functions/ai-deepseek`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: prompt, temperature: 0.3 }),

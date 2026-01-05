@@ -1,5 +1,5 @@
 // Netlify Serverless: Create a social post stored in PlayFab user data under key "socialPosts"
-import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from './_utils/playfab.js';
 
 export async function handler(event, context) {
   try {

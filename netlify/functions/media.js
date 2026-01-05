@@ -56,8 +56,8 @@ export async function handler(event, context) {
 
     // Fetch movies and music data in parallel
     const [moviesData, musicData] = await Promise.all([
-      safeFetchJson(`${origin}/.netlify/functions/movies/search?trending=true`),
-      safeFetchJson(`${origin}/.netlify/functions/music/search?artist=Taylor%20Swift`),
+      safeFetchJson(`${origin}/.netlify/functions/movies-search?trending=true`),
+      safeFetchJson(`${origin}/.netlify/functions/music-search?artist=Taylor%20Swift`),
     ]);
 
     const movies = (moviesData?.movies || []).slice(0, 10).map((m) => ({

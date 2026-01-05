@@ -1,7 +1,7 @@
 // Netlify Serverless: Exchange premium tokens (PT) for in-app currency packs (GC)
 // POST { packId: 'starter'|'pro'|'elite' }
 // Requires PlayFab currency codes: PT (premium token) and GC configured in Title
-import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverAddCurrency, serverSubtractCurrency, serverGetInventory, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverAddCurrency, serverSubtractCurrency, serverGetInventory, assertPlayFabEnv } from './_utils/playfab.js';
 
 const PACKS = {
   starter: { ptCost: 1, gcGrant: 100 },

@@ -1,6 +1,6 @@
 // Netlify Serverless: PlayFab session initialization
 // POST: Creates or retrieves session, sets pfid cookie
-import { corsHeaders, jsonResponse, optionsResponse, getPfidFromCookie, setPfidCookie, serverLoginWithServerCustomId, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getPfidFromCookie, setPfidCookie, serverLoginWithServerCustomId, assertPlayFabEnv } from './_utils/playfab.js';
 
 function generateCustomId() {
   return 'user_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);

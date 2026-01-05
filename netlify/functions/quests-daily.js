@@ -1,5 +1,5 @@
 // Netlify Serverless: Daily quests (claim rewards via PlayFab)
-import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverAddCurrency, serverGetPlayerStatistics, serverUpdateStatistic, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverAddCurrency, serverGetPlayerStatistics, serverUpdateStatistic, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from './_utils/playfab.js';
 
 function originFromEvent(event) {
   const headers = event.headers || {};
@@ -54,8 +54,8 @@ export async function handler(event, context) {
       const origin = originFromEvent(event);
       const [news, crypto, us] = await Promise.all([
         safeFetchJson(`${origin}/.netlify/functions/news?q=${encodeURIComponent('finance OR markets OR technology OR crypto OR real estate')}&limit=8`),
-        safeFetchJson(`${origin}/.netlify/functions/crypto/quotes?ids=bitcoin,ethereum,solana&vs_currency=usd`),
-        safeFetchJson(`${origin}/.netlify/functions/markets/us?symbols=AAPL,MSFT,NVDA,TSLA`),
+        safeFetchJson(`${origin}/.netlify/functions/crypto-quotes?ids=bitcoin,ethereum,solana&vs_currency=usd`),
+        safeFetchJson(`${origin}/.netlify/functions/markets-us?symbols=AAPL,MSFT,NVDA,TSLA`),
       ]);
 
       const signals = {
@@ -73,7 +73,7 @@ export async function handler(event, context) {
 Rules: actionable, realistic, reflect headlines/price moves, no markdown.` }
       ];
 
-      const aiRes = await fetch(`${origin}/.netlify/functions/ai/deepseek`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: prompt, temperature: 0.2 }) });
+      const aiRes = await fetch(`${origin}/.netlify/functions/ai-deepseek`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: prompt, temperature: 0.2 }) });
       if (!aiRes.ok) return jsonResponse(aiRes.status, { error: 'ai_error' });
       const ai = await aiRes.json();
       const content = ai?.choices?.[0]?.message?.content || '';

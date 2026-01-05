@@ -1,6 +1,6 @@
 // Netlify Serverless: PlayFab currency balances
 // GET: Returns virtual currency balances (PT, GC)
-import { corsHeaders, jsonResponse, optionsResponse, getPfidFromCookie, serverGetInventory, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getPfidFromCookie, serverGetInventory, assertPlayFabEnv } from './_utils/playfab.js';
 
 export async function handler(event, context) {
   try {

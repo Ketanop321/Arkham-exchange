@@ -1,7 +1,7 @@
 // Netlify Serverless: PlayFab user data operations
 // GET: Fetch user data by keys
 // POST: Update user data
-import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from '../_utils/playfab.js';
+import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from './_utils/playfab.js';
 
 export async function handler(event, context) {
   try {

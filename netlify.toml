@@ -5,12 +5,112 @@
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["netlify/functions/**"]
+  directory = "netlify/functions"
 
-# Redirect API calls to Netlify Functions
+# API redirects - map each API path to its function
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  from = "/api/playfab/session"
+  to = "/.netlify/functions/playfab-session"
+  status = 200
+
+[[redirects]]
+  from = "/api/playfab/currency"
+  to = "/.netlify/functions/playfab-currency"
+  status = 200
+
+[[redirects]]
+  from = "/api/playfab/leaderboard"
+  to = "/.netlify/functions/playfab-leaderboard"
+  status = 200
+
+[[redirects]]
+  from = "/api/playfab/userdata"
+  to = "/.netlify/functions/playfab-userdata"
+  status = 200
+
+[[redirects]]
+  from = "/api/playfab/welcome"
+  to = "/.netlify/functions/playfab-welcome"
+  status = 200
+
+[[redirects]]
+  from = "/api/store/exchange"
+  to = "/.netlify/functions/store-exchange"
+  status = 200
+
+[[redirects]]
+  from = "/api/ai/deepseek"
+  to = "/.netlify/functions/ai-deepseek"
+  status = 200
+
+[[redirects]]
+  from = "/api/career/tracks"
+  to = "/.netlify/functions/career-tracks"
+  status = 200
+
+[[redirects]]
+  from = "/api/crypto/quotes"
+  to = "/.netlify/functions/crypto-quotes"
+  status = 200
+
+[[redirects]]
+  from = "/api/markets/us"
+  to = "/.netlify/functions/markets-us"
+  status = 200
+
+[[redirects]]
+  from = "/api/markets/in"
+  to = "/.netlify/functions/markets-in"
+  status = 200
+
+[[redirects]]
+  from = "/api/news"
+  to = "/.netlify/functions/news"
+  status = 200
+
+[[redirects]]
+  from = "/api/social/feed"
+  to = "/.netlify/functions/social-feed"
+  status = 200
+
+[[redirects]]
+  from = "/api/social/post"
+  to = "/.netlify/functions/social-post"
+  status = 200
+
+[[redirects]]
+  from = "/api/quests/daily"
+  to = "/.netlify/functions/quests-daily"
+  status = 200
+
+[[redirects]]
+  from = "/api/simulations/generate"
+  to = "/.netlify/functions/simulations-generate"
+  status = 200
+
+[[redirects]]
+  from = "/api/simulations/run"
+  to = "/.netlify/functions/simulations-run"
+  status = 200
+
+[[redirects]]
+  from = "/api/companies/search"
+  to = "/.netlify/functions/companies-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/movies/search"
+  to = "/.netlify/functions/movies-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/music/search"
+  to = "/.netlify/functions/music-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/media"
+  to = "/.netlify/functions/media"
   status = 200
 
 # SPA fallback - serve index.html for all routes
