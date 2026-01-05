@@ -199,7 +199,7 @@ const ArkhamXchange: React.FC = () => {
             {!sidebarCollapsed && (
               <div className="flex-1">
                 <div className="text-sm font-medium text-white">Professional</div>
-                <div className="text-xs text-white/60">Level 15 • Diamond Tier</div>
+                <div className="text-xs text-white/60">Level 1 • Bronze Tier</div>
               </div>
             )}
           </div>

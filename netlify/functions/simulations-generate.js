@@ -54,7 +54,7 @@ export async function handler(event, context) {
     const [news, crypto, us] = await Promise.all([
       safeFetchJson(`${origin}/.netlify/functions/news?q=${encodeURIComponent('markets finance crypto')}&limit=8`),
       safeFetchJson(`${origin}/.netlify/functions/crypto-quotes?ids=bitcoin,ethereum,solana&vs_currency=usd`),
-      safeFetchJson(`${origin}/.netlify/functions/markets-us?symbols=AAPL,MSFT,NVDA,TSLA`),
+      safeFetchJson(`${origin}/.netlify/functions/markets-us?symbols=AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,JPM,V,JNJ,WMT,DIS,NFLX,AMD,BA,GS`),
     ]);
 
     const signals = {

@@ -70,13 +70,13 @@ const GameProgress: React.FC = () => {
   const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>([]);
   const [marketSimulations, setMarketSimulations] = useState<MarketSimulation[]>([]);
   const [userStats, setUserStats] = useState({
-    level: 15,
-    xp: 7500,
-    nextLevelXp: 10000,
-    totalFundsManaged: 3,
-    totalAUM: 25000000,
-    careerRank: 'Senior Associate',
-    specializations: ['Quantitative Analysis', 'Risk Management', 'Portfolio Construction']
+    level: 1,
+    xp: 0,
+    nextLevelXp: 1000,
+    totalFundsManaged: 0,
+    totalAUM: 0,
+    careerRank: 'Trainee',
+    specializations: []
   });
   // PlayFab session is ensured on mount; no need to gate with a flag here
   const [claimedGoals, setClaimedGoals] = useState<Record<string, boolean>>({});

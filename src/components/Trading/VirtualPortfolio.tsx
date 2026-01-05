@@ -6,7 +6,7 @@ interface VirtualAsset {
   id: string;
   symbol: string;
   name: string;
-  type: 'stock' | 'etf' | 'real-estate' | 'startup-token' | 'crypto';
+  type: 'stock' | 'etf' | 'bond' | 'commodity' | 'reit' | 'real-estate' | 'startup-token' | 'crypto';
   price: number;
   change24h: number;
   changePercent: number;
@@ -275,23 +275,101 @@ const VirtualPortfolio: React.FC = () => {
 
       // US equities (live via Alpaca or AlphaVantage)
       let usAssets: VirtualAsset[] = [];
+      
+      // Sector mapping for stocks
+      const sectorMap: Record<string, { sector: string; name: string; type: 'stock' | 'etf' | 'bond' | 'commodity' | 'reit'; risk: number }> = {
+        // Technology
+        AAPL: { sector: 'Technology', name: 'Apple Inc', type: 'stock', risk: 4 },
+        MSFT: { sector: 'Technology', name: 'Microsoft Corp', type: 'stock', risk: 3 },
+        GOOGL: { sector: 'Technology', name: 'Alphabet Inc', type: 'stock', risk: 4 },
+        AMZN: { sector: 'Technology', name: 'Amazon.com Inc', type: 'stock', risk: 5 },
+        NVDA: { sector: 'Technology', name: 'NVIDIA Corp', type: 'stock', risk: 7 },
+        META: { sector: 'Technology', name: 'Meta Platforms', type: 'stock', risk: 6 },
+        TSLA: { sector: 'Automotive', name: 'Tesla Inc', type: 'stock', risk: 8 },
+        INTC: { sector: 'Technology', name: 'Intel Corp', type: 'stock', risk: 5 },
+        AMD: { sector: 'Technology', name: 'AMD Inc', type: 'stock', risk: 7 },
+        CSCO: { sector: 'Technology', name: 'Cisco Systems', type: 'stock', risk: 3 },
+        ADBE: { sector: 'Technology', name: 'Adobe Inc', type: 'stock', risk: 5 },
+        CRM: { sector: 'Technology', name: 'Salesforce Inc', type: 'stock', risk: 5 },
+        ORCL: { sector: 'Technology', name: 'Oracle Corp', type: 'stock', risk: 4 },
+        IBM: { sector: 'Technology', name: 'IBM Corp', type: 'stock', risk: 3 },
+        QCOM: { sector: 'Technology', name: 'Qualcomm Inc', type: 'stock', risk: 5 },
+        TXN: { sector: 'Technology', name: 'Texas Instruments', type: 'stock', risk: 4 },
+        // Finance
+        'BRK.B': { sector: 'Finance', name: 'Berkshire Hathaway', type: 'stock', risk: 3 },
+        JPM: { sector: 'Finance', name: 'JPMorgan Chase', type: 'stock', risk: 4 },
+        V: { sector: 'Finance', name: 'Visa Inc', type: 'stock', risk: 3 },
+        MA: { sector: 'Finance', name: 'Mastercard Inc', type: 'stock', risk: 3 },
+        GS: { sector: 'Finance', name: 'Goldman Sachs', type: 'stock', risk: 5 },
+        AXP: { sector: 'Finance', name: 'American Express', type: 'stock', risk: 4 },
+        PYPL: { sector: 'Finance', name: 'PayPal Holdings', type: 'stock', risk: 6 },
+        // Healthcare
+        JNJ: { sector: 'Healthcare', name: 'Johnson & Johnson', type: 'stock', risk: 2 },
+        UNH: { sector: 'Healthcare', name: 'UnitedHealth Group', type: 'stock', risk: 3 },
+        MRK: { sector: 'Healthcare', name: 'Merck & Co', type: 'stock', risk: 3 },
+        PFE: { sector: 'Healthcare', name: 'Pfizer Inc', type: 'stock', risk: 4 },
+        ABT: { sector: 'Healthcare', name: 'Abbott Labs', type: 'stock', risk: 3 },
+        TMO: { sector: 'Healthcare', name: 'Thermo Fisher', type: 'stock', risk: 4 },
+        // Consumer
+        WMT: { sector: 'Consumer', name: 'Walmart Inc', type: 'stock', risk: 2 },
+        PG: { sector: 'Consumer', name: 'Procter & Gamble', type: 'stock', risk: 2 },
+        HD: { sector: 'Consumer', name: 'Home Depot', type: 'stock', risk: 3 },
+        COST: { sector: 'Consumer', name: 'Costco Wholesale', type: 'stock', risk: 3 },
+        NKE: { sector: 'Consumer', name: 'Nike Inc', type: 'stock', risk: 4 },
+        MCD: { sector: 'Consumer', name: 'McDonald\'s Corp', type: 'stock', risk: 2 },
+        SBUX: { sector: 'Consumer', name: 'Starbucks Corp', type: 'stock', risk: 4 },
+        PEP: { sector: 'Consumer', name: 'PepsiCo Inc', type: 'stock', risk: 2 },
+        KO: { sector: 'Consumer', name: 'Coca-Cola Co', type: 'stock', risk: 2 },
+        DIS: { sector: 'Consumer', name: 'Walt Disney Co', type: 'stock', risk: 5 },
+        NFLX: { sector: 'Consumer', name: 'Netflix Inc', type: 'stock', risk: 6 },
+        LOW: { sector: 'Consumer', name: 'Lowe\'s Companies', type: 'stock', risk: 3 },
+        // Industrial
+        BA: { sector: 'Industrial', name: 'Boeing Co', type: 'stock', risk: 6 },
+        CAT: { sector: 'Industrial', name: 'Caterpillar Inc', type: 'stock', risk: 4 },
+        HON: { sector: 'Industrial', name: 'Honeywell Intl', type: 'stock', risk: 3 },
+        UPS: { sector: 'Industrial', name: 'United Parcel Service', type: 'stock', risk: 3 },
+        // Energy
+        CVX: { sector: 'Energy', name: 'Chevron Corp', type: 'stock', risk: 5 },
+        XOM: { sector: 'Energy', name: 'Exxon Mobil', type: 'stock', risk: 5 },
+        NEE: { sector: 'Energy', name: 'NextEra Energy', type: 'stock', risk: 4 },
+        // ETFs
+        SPY: { sector: 'ETF', name: 'S&P 500 ETF', type: 'etf', risk: 4 },
+        QQQ: { sector: 'ETF', name: 'Nasdaq-100 ETF', type: 'etf', risk: 5 },
+        VTI: { sector: 'ETF', name: 'Total Stock Market ETF', type: 'etf', risk: 4 },
+        IWM: { sector: 'ETF', name: 'Russell 2000 ETF', type: 'etf', risk: 6 },
+        DIA: { sector: 'ETF', name: 'Dow Jones ETF', type: 'etf', risk: 3 },
+        // Commodities
+        GLD: { sector: 'Commodities', name: 'Gold ETF', type: 'commodity', risk: 4 },
+        SLV: { sector: 'Commodities', name: 'Silver ETF', type: 'commodity', risk: 5 },
+        // Bonds
+        TLT: { sector: 'Bonds', name: '20+ Year Treasury ETF', type: 'bond', risk: 3 },
+        HYG: { sector: 'Bonds', name: 'High Yield Corporate Bond ETF', type: 'bond', risk: 5 },
+        // Real Estate
+        VNQ: { sector: 'Real Estate', name: 'Real Estate ETF', type: 'reit', risk: 5 },
+        XLRE: { sector: 'Real Estate', name: 'Real Estate Select ETF', type: 'reit', risk: 5 },
+      };
+      
       try {
-        const usRes = await fetch(`/api/markets/us?symbols=AAPL,MSFT,NVDA,TSLA`);
+        const usRes = await fetch(`/api/markets/us?symbols=AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,BRK.B,JPM,V,JNJ,WMT,PG,MA,UNH,HD,DIS,PYPL,NFLX,ADBE,CRM,INTC,AMD,CSCO,PEP,KO,MRK,PFE,ABT,TMO,COST,NKE,MCD,SBUX,BA,CAT,GS,AXP,IBM,ORCL,QCOM,TXN,HON,UPS,LOW,CVX,XOM,NEE,SPY,QQQ,VTI,IWM,DIA,GLD,SLV,TLT,HYG,VNQ,XLRE`);
         if (usRes.ok) {
           const usJson = await usRes.json();
-          usAssets = (usJson.quotes || []).map((q: any) => ({
-            id: `us-${String(q.symbol)}`,
-            symbol: String(q.symbol),
-            name: String(q.symbol),
-            type: 'stock' as const,
-            price: Number(q.price || 0),
-            change24h: Number(q.change || 0),
-            changePercent: Number(q.changePercent || 0),
-            volume24h: Number(q.volume || 0),
-            description: `${String(q.symbol)} equity`,
-            riskScore: 5,
-            sector: 'Technology',
-          }));
+          usAssets = (usJson.quotes || []).map((q: any) => {
+            const sym = String(q.symbol);
+            const info = sectorMap[sym] || { sector: 'Other', name: sym, type: 'stock' as const, risk: 5 };
+            return {
+              id: `us-${sym}`,
+              symbol: sym,
+              name: info.name,
+              type: info.type,
+              price: Number(q.price || 0),
+              change24h: Number(q.change || 0),
+              changePercent: Number(q.changePercent || 0),
+              volume24h: Number(q.volume || 0),
+              description: `${info.name} - ${info.sector}`,
+              riskScore: info.risk,
+              sector: info.sector,
+            };
+          });
         }
       } catch (e) {
         console.warn('us quotes failed', e);
@@ -728,7 +806,16 @@ const VirtualPortfolio: React.FC = () => {
                   >
                     <option value="all">All Assets</option>
                     <option value="Technology">Technology</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Consumer">Consumer</option>
+                    <option value="Industrial">Industrial</option>
+                    <option value="Energy">Energy</option>
                     <option value="Automotive">Automotive</option>
+                    <option value="ETF">ETFs</option>
+                    <option value="Bonds">Bonds</option>
+                    <option value="Commodities">Commodities</option>
+                    <option value="Real Estate">Real Estate</option>
                     <option value="Crypto">Crypto</option>
                   </select>
                   <button

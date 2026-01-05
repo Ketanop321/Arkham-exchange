@@ -103,7 +103,7 @@ export async function handler(event, context) {
     }
 
     const params = event.queryStringParameters || {};
-    const symbolsParam = (params.symbols || 'AAPL,MSFT,NVDA,TSLA').toString();
+    const symbolsParam = (params.symbols || 'AAPL,MSFT,GOOGL,AMZN,NVDA,META,TSLA,BRK.B,JPM,V,JNJ,WMT,PG,MA,UNH,HD,DIS,PYPL,NFLX,ADBE,CRM,INTC,AMD,CSCO,PEP,KO,MRK,PFE,ABT,TMO,COST,NKE,MCD,SBUX,BA,CAT,GS,AXP,IBM,ORCL,QCOM,TXN,HON,UPS,LOW,CVX,XOM,NEE,SPY,QQQ,VTI,IWM,DIA,GLD,SLV,TLT,HYG,VNQ,XLRE').toString();
     const symbols = symbolsParam.split(',').map((s) => s.trim()).filter(Boolean);
 
     let data = [];
