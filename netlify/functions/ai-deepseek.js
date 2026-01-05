@@ -38,7 +38,7 @@ export async function handler(event, context) {
     if (!apiKey) return jsonResponse(500, { error: 'missing_openrouter_key' });
 
     const body = getBody(event);
-    const model = body.model || process.env.OPENROUTER_MODEL || 'tngtech/deepseek-r1t2-chimera:free';
+    const model = body.model || process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free';
     const messages = Array.isArray(body.messages) ? body.messages : [{ role: 'user', content: String(body.prompt || '') }];
     const temperature = typeof body.temperature === 'number' ? body.temperature : 0.5;
 

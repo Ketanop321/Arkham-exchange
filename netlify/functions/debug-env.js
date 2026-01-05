@@ -25,49 +25,55 @@ export async function handler(event, context) {
   const envVars = {
     PLAYFAB_TITLE_ID: {
       set: !!process.env.PLAYFAB_TITLE_ID,
-      value: process.env.PLAYFAB_TITLE_ID || null,
+      value: process.env.PLAYFAB_TITLE_ID || 'NOT SET',
     },
     PLAYFAB_SECRET_KEY: {
       set: !!process.env.PLAYFAB_SECRET_KEY,
       length: process.env.PLAYFAB_SECRET_KEY?.length || 0,
-      preview: process.env.PLAYFAB_SECRET_KEY ? `${process.env.PLAYFAB_SECRET_KEY.substring(0, 4)}...${process.env.PLAYFAB_SECRET_KEY.slice(-4)}` : null,
+      preview: process.env.PLAYFAB_SECRET_KEY 
+        ? `${process.env.PLAYFAB_SECRET_KEY.substring(0, 6)}...${process.env.PLAYFAB_SECRET_KEY.slice(-4)}` 
+        : 'NOT SET',
     },
     OPENROUTER_API_KEY: {
       set: !!process.env.OPENROUTER_API_KEY,
       length: process.env.OPENROUTER_API_KEY?.length || 0,
+      preview: process.env.OPENROUTER_API_KEY
+        ? `${process.env.OPENROUTER_API_KEY.substring(0, 10)}...`
+        : 'NOT SET',
     },
     OPENROUTER_MODEL: {
       set: !!process.env.OPENROUTER_MODEL,
-      value: process.env.OPENROUTER_MODEL || null,
+      value: process.env.OPENROUTER_MODEL || 'NOT SET (will use xiaomi/mimo-v2-flash:free)',
     },
     ALPACA_API_KEY: {
       set: !!process.env.ALPACA_API_KEY,
-      length: process.env.ALPACA_API_KEY?.length || 0,
     },
     ALPHAVANTAGE_API_KEY: {
       set: !!process.env.ALPHAVANTAGE_API_KEY,
-      length: process.env.ALPHAVANTAGE_API_KEY?.length || 0,
     },
     GNEWS_API_KEY: {
       set: !!process.env.GNEWS_API_KEY,
-      length: process.env.GNEWS_API_KEY?.length || 0,
     },
     MARKETAUX_API_TOKEN: {
       set: !!process.env.MARKETAUX_API_TOKEN,
-      length: process.env.MARKETAUX_API_TOKEN?.length || 0,
     },
     TMDB_API_KEY: {
       set: !!process.env.TMDB_API_KEY,
-      length: process.env.TMDB_API_KEY?.length || 0,
     },
   };
 
-  const allSet = Object.values(envVars).every(v => v.set);
+  const criticalMissing = [];
+  if (!process.env.PLAYFAB_TITLE_ID) criticalMissing.push('PLAYFAB_TITLE_ID');
+  if (!process.env.PLAYFAB_SECRET_KEY) criticalMissing.push('PLAYFAB_SECRET_KEY');
+  if (!process.env.OPENROUTER_API_KEY) criticalMissing.push('OPENROUTER_API_KEY');
 
   return jsonResponse(200, {
-    ok: allSet,
+    ok: criticalMissing.length === 0,
+    criticalMissing,
+    message: criticalMissing.length > 0 
+      ? `CRITICAL: Add these env vars in Netlify Dashboard > Site Settings > Environment Variables: ${criticalMissing.join(', ')}`
+      : 'All critical env vars are set!',
     timestamp: new Date().toISOString(),
     envVars,
-    nodeVersion: process.version,
   });
 }
