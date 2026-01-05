@@ -1,4 +1,4 @@
-// Netlify Serverless: Career tracks via AI (OpenRouter)
+// Netlify Serverless: Career tracks via AI (Groq primary, OpenRouter fallback)
 // GET params: level?, focus?
 // Returns structured JSON for GameProgress
 
@@ -18,9 +18,33 @@ function jsonResponse(statusCode, body) {
   };
 }
 
-async function callOpenRouter(messages, model, temperature = 0.2) {
+async function callAI(messages, model, temperature = 0.2) {
+  // Try Groq first (faster)
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const groqModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model: groqModel, messages, temperature }),
+      });
+      if (r.ok) {
+        const json = await r.json();
+        return json.choices?.[0]?.message?.content || '';
+      }
+      console.warn('[career-tracks] Groq failed, trying OpenRouter fallback');
+    } catch (e) {
+      console.warn('[career-tracks] Groq error:', e.message);
+    }
+  }
+
+  // Fallback to OpenRouter
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
+  if (!apiKey) throw new Error('No AI API key available (GROQ_API_KEY or OPENROUTER_API_KEY)');
   
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -41,7 +65,7 @@ async function callOpenRouter(messages, model, temperature = 0.2) {
   
   if (!r.ok) {
     const text = await r.text();
-    throw new Error(`OpenRouter error ${r.status}: ${text}`);
+    throw new Error(`AI API error ${r.status}: ${text}`);
   }
   
   const json = await r.json();
@@ -110,8 +134,8 @@ export async function handler(event, context) {
 Ensure numbers are realistic and strings ISO-8601 for dates. JSON only.`
     };
 
-    console.log('[career-tracks] Calling OpenRouter...');
-    const content = await callOpenRouter([system, user]);
+    console.log('[career-tracks] Calling Groq AI...');
+    const content = await callAI([system, user]);
     console.log('[career-tracks] Got response, parsing...');
     
     const parsed = tryParseJSON(content);

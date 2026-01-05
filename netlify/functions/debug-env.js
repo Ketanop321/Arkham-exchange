@@ -34,16 +34,27 @@ export async function handler(event, context) {
         ? `${process.env.PLAYFAB_SECRET_KEY.substring(0, 6)}...${process.env.PLAYFAB_SECRET_KEY.slice(-4)}` 
         : 'NOT SET',
     },
+    GROQ_API_KEY: {
+      set: !!process.env.GROQ_API_KEY,
+      length: process.env.GROQ_API_KEY?.length || 0,
+      preview: process.env.GROQ_API_KEY
+        ? `${process.env.GROQ_API_KEY.substring(0, 10)}...`
+        : 'NOT SET',
+    },
+    GROQ_MODEL: {
+      set: !!process.env.GROQ_MODEL,
+      value: process.env.GROQ_MODEL || 'NOT SET (will use openai/gpt-oss-120b)',
+    },
     OPENROUTER_API_KEY: {
       set: !!process.env.OPENROUTER_API_KEY,
       length: process.env.OPENROUTER_API_KEY?.length || 0,
       preview: process.env.OPENROUTER_API_KEY
         ? `${process.env.OPENROUTER_API_KEY.substring(0, 10)}...`
-        : 'NOT SET',
+        : 'NOT SET (fallback only)',
     },
     OPENROUTER_MODEL: {
       set: !!process.env.OPENROUTER_MODEL,
-      value: process.env.OPENROUTER_MODEL || 'NOT SET (will use xiaomi/mimo-v2-flash:free)',
+      value: process.env.OPENROUTER_MODEL || 'NOT SET (xiaomi/mimo-v2-flash:free as fallback)',
     },
     ALPACA_API_KEY: {
       set: !!process.env.ALPACA_API_KEY,
@@ -65,14 +76,14 @@ export async function handler(event, context) {
   const criticalMissing = [];
   if (!process.env.PLAYFAB_TITLE_ID) criticalMissing.push('PLAYFAB_TITLE_ID');
   if (!process.env.PLAYFAB_SECRET_KEY) criticalMissing.push('PLAYFAB_SECRET_KEY');
-  if (!process.env.OPENROUTER_API_KEY) criticalMissing.push('OPENROUTER_API_KEY');
+  if (!process.env.GROQ_API_KEY && !process.env.OPENROUTER_API_KEY) criticalMissing.push('GROQ_API_KEY or OPENROUTER_API_KEY');
 
   return jsonResponse(200, {
     ok: criticalMissing.length === 0,
     criticalMissing,
     message: criticalMissing.length > 0 
       ? `CRITICAL: Add these env vars in Netlify Dashboard > Site Settings > Environment Variables: ${criticalMissing.join(', ')}`
-      : 'All critical env vars are set!',
+      : 'All critical env vars are set! Using Groq API for ultra-fast AI inference.',
     timestamp: new Date().toISOString(),
     envVars,
   });

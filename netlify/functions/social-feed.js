@@ -1,4 +1,4 @@
-// Netlify Serverless: Social feed via AI (OpenRouter)
+// Netlify Serverless: Social feed via AI (Groq primary, OpenRouter fallback)
 // GET: Returns { users, posts, leaderboard }
 
 function corsHeaders() {
@@ -17,9 +17,33 @@ function jsonResponse(statusCode, body) {
   };
 }
 
-async function callOpenRouter(messages, model, temperature = 0.2) {
+async function callAI(messages, model, temperature = 0.2) {
+  // Try Groq first (faster)
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const groqModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model: groqModel, messages, temperature }),
+      });
+      if (r.ok) {
+        const json = await r.json();
+        return json.choices?.[0]?.message?.content || '';
+      }
+      console.warn('[social-feed] Groq failed, trying OpenRouter fallback');
+    } catch (e) {
+      console.warn('[social-feed] Groq error:', e.message);
+    }
+  }
+
+  // Fallback to OpenRouter
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
+  if (!apiKey) throw new Error('No AI API key available (GROQ_API_KEY or OPENROUTER_API_KEY)');
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -40,7 +64,7 @@ async function callOpenRouter(messages, model, temperature = 0.2) {
 
   if (!r.ok) {
     const text = await r.text();
-    throw new Error(`OpenRouter error ${r.status}: ${text}`);
+    throw new Error(`AI API error ${r.status}: ${text}`);
   }
 
   const json = await r.json();
@@ -108,8 +132,8 @@ Generate 3-4 users, 3-4 posts, 3 leaderboard entries. Realistic finance content.
     };
 
 
-    console.log('[social-feed] Calling OpenRouter...');
-    const content = await callOpenRouter([system, user]);
+    console.log('[social-feed] Calling Groq AI...');
+    const content = await callAI([system, user]);
     console.log('[social-feed] Got response, parsing...');
 
     const parsed = tryParseJSON(content);
