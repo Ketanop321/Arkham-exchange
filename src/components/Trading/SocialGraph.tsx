@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, MessageSquare, TrendingUp, Star, Award, Crown, Shield, Hash, GitBranch, Copy, Share2, Heart, Eye, Lock, Unlock, Zap, Target, Trophy, Gem, Medal } from 'lucide-react';
+import { useToast } from '../Toast';
 
 interface User {
   id: string;
@@ -91,6 +92,7 @@ interface LeaderboardEntry {
 }
 
 const SocialGraph: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'feed' | 'discover' | 'leaderboard' | 'profile'>('feed');
   const [posts, setPosts] = useState<Post[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -246,6 +248,8 @@ const SocialGraph: React.FC = () => {
   // Mock data function removed - using real API data only
 
   const followUser = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    const isNowFollowing = user ? !user.social.isFollowing : true;
     setUsers(prev => prev.map(user => 
       user.id === userId 
         ? { 
@@ -258,9 +262,12 @@ const SocialGraph: React.FC = () => {
           }
         : user
     ));
+    showToast(isNowFollowing ? 'Followed user!' : 'Unfollowed user', isNowFollowing ? 'success' : 'info');
   };
 
   const likePost = (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    const isNowLiked = post ? !post.engagement.hasLiked : true;
     setPosts(prev => prev.map(post =>
       post.id === postId
         ? {
@@ -273,6 +280,7 @@ const SocialGraph: React.FC = () => {
           }
         : post
     ));
+    if (isNowLiked) showToast('Post liked!', 'success');
   };
 
   const getRankColor = (rank: string) => {

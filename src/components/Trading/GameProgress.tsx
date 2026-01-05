@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GraduationCap, Target, TrendingUp, Building2, Briefcase, Lock, CheckCircle, PieChart, Trophy, Rocket, Clapperboard } from 'lucide-react';
+import { useToast } from '../Toast';
 
 interface CareerTrack {
   id: string;
@@ -62,6 +63,7 @@ interface MarketSimulation {
 }
 
 const GameProgress: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'career-tracks' | 'daily-goals' | 'simulations' | 'achievements'>('overview');
   const [careerTracks, setCareerTracks] = useState<CareerTrack[]>([]);
   const [selectedTrack, setSelectedTrack] = useState<CareerTrack | null>(null);
@@ -139,7 +141,10 @@ const GameProgress: React.FC = () => {
         body: JSON.stringify({ data: { teamStats: { name, joinedAt: new Date().toISOString() } } }),
       });
       setMyTeam({ name, joinedAt: new Date().toISOString() });
-    } catch {}
+      showToast(`Joined team: ${name}!`, 'success');
+    } catch {
+      showToast('Failed to join team', 'error');
+    }
   }
 
   async function completeModule(track: CareerTrack, moduleId: string) {
@@ -190,8 +195,11 @@ const GameProgress: React.FC = () => {
       const allDone = (newSelected || track).modules.every((m) => m.id === moduleId ? true : m.completed);
       if (allDone) {
         newAch.add(`Track Completed: ${track.name}`);
+        showToast(`🎉 Track Completed: ${track.name}!`, 'success');
         // Optionally grant track listed achievements
         for (const a of track.achievements || []) newAch.add(a);
+      } else {
+        showToast(`Module completed: ${mod.name} (+${gc} GC)`, 'success');
       }
       const arr = Array.from(newAch);
       setAchievements(arr);
@@ -202,6 +210,7 @@ const GameProgress: React.FC = () => {
       }).catch(() => {});
     } catch (e) {
       console.warn('completeModule failed', e);
+      showToast('Failed to complete module', 'error');
     }
   }
 
@@ -285,6 +294,7 @@ const GameProgress: React.FC = () => {
         } else {
           setUserStats((prev) => ({ ...prev, xp: prev.xp + (goal.reward.xp || 0) }));
         }
+        showToast(`Reward claimed: +${goal.reward.xp} XP, +${rewardCurrency} GC!`, 'success');
         // refresh GC balance after claim
         try {
           const cr = await fetch('/api/playfab/currency');
@@ -293,6 +303,7 @@ const GameProgress: React.FC = () => {
       }
     } catch (e) {
       console.warn('claimDailyGoal failed', e);
+      showToast('Failed to claim reward', 'error');
     }
   }
 
@@ -320,8 +331,10 @@ const GameProgress: React.FC = () => {
         subquests: Array.isArray(s?.subquests) ? s.subquests.map((q: any) => ({ role: String(q.role || ''), taskId: String(q.taskId || q.id || ''), hint: String(q.hint || '') })) : [],
       };
       setMarketSimulations((prev) => [newSim, ...prev]);
+      showToast(`Simulation "${newSim.name}" generated!`, 'success');
     } catch (e) {
       console.warn('generateSimulation failed', e);
+      showToast('Failed to generate simulation', 'error');
     } finally {
       setGenerating(false);
     }

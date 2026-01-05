@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Plus, Share2, Shield, Hash, Trophy, Search, ArrowUp, ArrowDown, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { useToast } from '../Toast';
 
 interface VirtualAsset {
   id: string;
@@ -104,6 +105,7 @@ interface VirtualPortfolio {
 }
 
 const VirtualPortfolio: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'market-data' | 'discover' | 'leaderboard'>('portfolio');
   const [selectedPortfolio, setSelectedPortfolio] = useState<VirtualPortfolio | null>(null);
   const [userPortfolios, setUserPortfolios] = useState<VirtualPortfolio[]>([]);
@@ -449,6 +451,7 @@ const VirtualPortfolio: React.FC = () => {
     setUserPortfolios(next);
     setSelectedPortfolio(updated);
     await persistPortfolios(next);
+    showToast(`Added ${qty} ${selectedAsset.symbol} to portfolio!`, 'success');
     try { await updatePortfolioValueStat(updated.totalValue); } catch {}
   }
 
@@ -572,6 +575,7 @@ const VirtualPortfolio: React.FC = () => {
                 setUserPortfolios(next);
                 setSelectedPortfolio(np);
                 persistPortfolios(next);
+                showToast('Portfolio created successfully!', 'success');
               }}
               className="flex items-center space-x-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20"
             >

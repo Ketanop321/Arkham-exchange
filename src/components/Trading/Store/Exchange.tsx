@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Gift, Coins, RefreshCw, Shield, Sparkles } from 'lucide-react';
+import { useToast } from '../../Toast';
 
 interface Balances { [code: string]: number }
 
 const Exchange: React.FC = () => {
   const [balances, setBalances] = useState<Balances>({});
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const { showToast } = useToast();
 
   useEffect(() => {
     ensureSession().then(() => {
@@ -26,7 +26,7 @@ const Exchange: React.FC = () => {
       if (r.ok) {
         const j = await r.json();
         if (j.granted && !j.alreadyClaimed) {
-          setWelcomeMessage(j.message || 'Welcome bonus claimed!');
+          showToast('success', j.message || 'Welcome bonus claimed! 🎉');
           fetchBalances(); // Refresh balances after bonus
         }
       }
@@ -47,7 +47,6 @@ const Exchange: React.FC = () => {
   async function buy(packId: string) {
     if (loading) return;
     setLoading(true);
-    setMessage('');
     try {
       const r = await fetch('/api/store/exchange', {
         method: 'POST',
@@ -56,10 +55,10 @@ const Exchange: React.FC = () => {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || j?.error) throw new Error(j?.error || `status ${r.status}`);
-      setMessage(`Success: granted ${j.grantGC || 'GC'} using ${j.packId}.`);
+      showToast('success', `+${j.grantGC || 0} GC purchased successfully! 🪙`);
       await fetchBalances();
     } catch (e: any) {
-      setMessage(`Failed: ${e?.message || 'unknown error'}`);
+      showToast('error', `Purchase failed: ${e?.message || 'unknown error'}`);
     } finally { setLoading(false); }
   }
 
@@ -74,7 +73,7 @@ const Exchange: React.FC = () => {
             <Gift size={24} className="text-white/80" />
             <h2 className="text-2xl font-mono text-white/90">Store</h2>
           </div>
-          <button onClick={fetchBalances} className="p-2 bg-white/10 rounded hover:bg-white/20">
+          <button onClick={() => { fetchBalances(); showToast('info', 'Balances refreshed'); }} className="p-2 bg-white/10 rounded hover:bg-white/20">
             <RefreshCw size={16} className="text-white/60" />
           </button>
         </div>
@@ -93,17 +92,6 @@ const Exchange: React.FC = () => {
             <div className="text-white/60 text-sm">PlayFab-secured balances</div>
           </div>
         </div>
-
-        {welcomeMessage && (
-          <div className="mb-4 px-4 py-3 rounded bg-green-500/20 text-green-400 flex items-center space-x-2">
-            <Sparkles size={18} />
-            <span>{welcomeMessage}</span>
-          </div>
-        )}
-
-        {message && (
-          <div className="mb-4 px-4 py-2 rounded bg-white/10 text-white/80">{message}</div>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="glass-effect rounded-lg p-6">
