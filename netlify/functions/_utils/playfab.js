@@ -21,7 +21,9 @@ function baseUrl() {
 
 async function httpPost(path, body, extraHeaders = {}) {
   const url = `${baseUrl()}/${path}`;
-  log('httpPost', `Calling ${path}`, { url, body: { ...body, TitleId: body?.TitleId || TITLE_ID }, hasSecretKey: !!extraHeaders['X-SecretKey'] });
+  // Ensure TitleId is always present; PlayFab server APIs can reject requests without it.
+  const bodyWithTitle = { TitleId: TITLE_ID, ...(body || {}) };
+  log('httpPost', `Calling ${path}`, { url, body: bodyWithTitle, hasSecretKey: !!extraHeaders['X-SecretKey'] });
   
   try {
     const r = await fetch(url, {
@@ -30,7 +32,7 @@ async function httpPost(path, body, extraHeaders = {}) {
         'Content-Type': 'application/json',
         ...extraHeaders,
       },
-      body: JSON.stringify(body || {}),
+      body: JSON.stringify(bodyWithTitle),
     });
     const text = await r.text();
     let json;
