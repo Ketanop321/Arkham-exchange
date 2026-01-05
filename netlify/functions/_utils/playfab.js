@@ -4,6 +4,16 @@
 const TITLE_ID = process.env.PLAYFAB_TITLE_ID;
 const SECRET = process.env.PLAYFAB_SECRET_KEY;
 
+// Debug logging helper
+function log(context, message, data = null) {
+  const timestamp = new Date().toISOString();
+  if (data) {
+    console.log(`[${timestamp}] [PlayFab:${context}] ${message}`, JSON.stringify(data, null, 2));
+  } else {
+    console.log(`[${timestamp}] [PlayFab:${context}] ${message}`);
+  }
+}
+
 function baseUrl() {
   const title = TITLE_ID || '';
   return `https://${title}.playfabapi.com`;
@@ -11,18 +21,27 @@ function baseUrl() {
 
 async function httpPost(path, body, extraHeaders = {}) {
   const url = `${baseUrl()}/${path}`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...extraHeaders,
-    },
-    body: JSON.stringify(body || {}),
-  });
-  const text = await r.text();
-  let json;
-  try { json = text ? JSON.parse(text) : {}; } catch { json = { error: 'invalid_json', raw: text }; }
-  return { ok: r.ok, status: r.status, json };
+  log('httpPost', `Calling ${path}`, { url, body: { ...body, TitleId: body?.TitleId || TITLE_ID }, hasSecretKey: !!extraHeaders['X-SecretKey'] });
+  
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...extraHeaders,
+      },
+      body: JSON.stringify(body || {}),
+    });
+    const text = await r.text();
+    let json;
+    try { json = text ? JSON.parse(text) : {}; } catch { json = { error: 'invalid_json', raw: text }; }
+    
+    log('httpPost', `Response from ${path}`, { ok: r.ok, status: r.status, json });
+    return { ok: r.ok, status: r.status, json };
+  } catch (err) {
+    log('httpPost', `Fetch error for ${path}`, { error: err.message });
+    throw err;
+  }
 }
 
 // ---------- HTTP helpers for Netlify ----------
@@ -156,6 +175,12 @@ export async function serverUpdateUserData(pfid, dataObj) {
 }
 
 export function assertPlayFabEnv() {
+  console.log('[PlayFab:assertEnv] Checking env vars:', { 
+    hasTitleId: !!TITLE_ID, 
+    titleId: TITLE_ID,
+    hasSecretKey: !!SECRET,
+    secretKeyLength: SECRET ? SECRET.length : 0
+  });
   if (!TITLE_ID) throw new Error('missing_PLAYFAB_TITLE_ID');
   if (!SECRET) throw new Error('missing_PLAYFAB_SECRET_KEY');
 }

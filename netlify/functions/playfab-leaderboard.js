@@ -4,6 +4,8 @@
 import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetLeaderboard, serverUpdateStatistic, assertPlayFabEnv } from './_utils/playfab.js';
 
 export async function handler(event, context) {
+  console.log('[playfab-leaderboard] Handler invoked', { method: event.httpMethod });
+  
   try {
     if (event.httpMethod === 'OPTIONS') return optionsResponse('GET, POST, OPTIONS');
 
@@ -14,15 +16,21 @@ export async function handler(event, context) {
       const stat = (params.stat || 'PortfolioValue').toString();
       const limit = Math.min(parseInt(params.limit || '25', 10), 100);
       const start = parseInt(params.start || '0', 10);
+      console.log('[playfab-leaderboard] GET params:', { stat, limit, start });
 
       const result = await serverGetLeaderboard(stat, limit, start);
+      console.log('[playfab-leaderboard] GET result:', result);
       
       if (!result.ok) {
-        console.error('PlayFab leaderboard error:', result.json);
+        console.error('[playfab-leaderboard] PlayFab leaderboard error:', result.json);
         return jsonResponse(result.status, { error: 'leaderboard_error', detail: result.json });
       }
 
-      const entries = (result.json?.data?.Leaderboard || []).map((e) => ({
+      // Handle both Data and data (PlayFab uses Data with capital D)
+      const leaderboardData = result.json?.data?.Leaderboard || result.json?.Data?.Leaderboard || [];
+      console.log('[playfab-leaderboard] entries count:', leaderboardData.length);
+      
+      const entries = leaderboardData.map((e) => ({
         playFabId: e.PlayFabId,
         position: e.Position + 1, // 0-indexed to 1-indexed
         statValue: e.StatValue,

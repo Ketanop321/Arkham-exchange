@@ -4,12 +4,16 @@
 import { corsHeaders, jsonResponse, optionsResponse, getBody, getPfidFromCookie, serverGetUserData, serverUpdateUserData, assertPlayFabEnv } from './_utils/playfab.js';
 
 export async function handler(event, context) {
+  console.log('[playfab-userdata] Handler invoked', { method: event.httpMethod });
+  
   try {
     if (event.httpMethod === 'OPTIONS') return optionsResponse('GET, POST, OPTIONS');
 
     assertPlayFabEnv();
 
     const pfid = getPfidFromCookie(event);
+    console.log('[playfab-userdata] pfid from cookie:', pfid || 'none');
+    
     if (!pfid) {
       return jsonResponse(401, { error: 'no_player_session' });
     }
@@ -18,16 +22,20 @@ export async function handler(event, context) {
       const params = event.queryStringParameters || {};
       const keysParam = (params.keys || '').toString();
       const keys = keysParam ? keysParam.split(',').map((k) => k.trim()).filter(Boolean) : undefined;
+      console.log('[playfab-userdata] GET keys:', keys);
 
       const result = await serverGetUserData(pfid, keys);
+      console.log('[playfab-userdata] GET result:', result);
       
       if (!result.ok) {
-        console.error('PlayFab get user data error:', result.json);
+        console.error('[playfab-userdata] PlayFab get user data error:', result.json);
         return jsonResponse(result.status, { error: 'userdata_error', detail: result.json });
       }
 
-      // Parse stored JSON values
-      const rawData = result.json?.data?.Data || {};
+      // Handle both Data and data (PlayFab uses Data with capital D)
+      const rawData = result.json?.data?.Data || result.json?.Data?.Data || {};
+      console.log('[playfab-userdata] rawData:', rawData);
+      
       const data = {};
       for (const [key, val] of Object.entries(rawData)) {
         const value = val?.Value;
