@@ -59,6 +59,10 @@ export async function handler(event, context) {
   diagnostic.step = 'body_built';
   diagnostic.requestBody = body;
 
+  // Use AbortController with 8 second timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -67,8 +71,10 @@ export async function handler(event, context) {
         'X-SecretKey': SECRET,
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     diagnostic.step = 'fetch_complete';
     diagnostic.httpStatus = response.status;
     diagnostic.httpStatusText = response.statusText;
@@ -135,11 +141,29 @@ export async function handler(event, context) {
       });
     }
   } catch (fetchError) {
+    clearTimeout(timeoutId);
     diagnostic.step = 'fetch_error';
+    
+    // Check if it's a timeout/abort error
+    if (fetchError.name === 'AbortError') {
+      return jsonResponse(200, {
+        ok: false,
+        error: 'timeout_error',
+        diagnostic,
+        message: 'Request timed out after 8 seconds',
+        possibleCauses: [
+          'PlayFab API is slow or unresponsive',
+          'Network latency between Netlify and PlayFab',
+          'Netlify function cold start issues'
+        ]
+      });
+    }
+    
     return jsonResponse(200, {
       ok: false,
       error: 'network_error',
       diagnostic,
+      errorName: fetchError.name,
       fetchError: fetchError.message,
       stack: fetchError.stack
     });
