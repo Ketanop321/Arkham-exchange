@@ -25,10 +25,6 @@ async function httpPost(path, body, extraHeaders = {}) {
   const bodyWithTitle = { TitleId: TITLE_ID, ...(body || {}) };
   log('httpPost', `Calling ${path}`, { url, body: bodyWithTitle, hasSecretKey: !!extraHeaders['X-SecretKey'] });
   
-  // Use AbortController with 8 second timeout (Netlify has 10s limit)
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
-  
   try {
     const r = await fetch(url, {
       method: 'POST',
@@ -37,10 +33,7 @@ async function httpPost(path, body, extraHeaders = {}) {
         ...extraHeaders,
       },
       body: JSON.stringify(bodyWithTitle),
-      signal: controller.signal,
     });
-    
-    clearTimeout(timeoutId);
     
     const text = await r.text();
     let json;
@@ -49,14 +42,7 @@ async function httpPost(path, body, extraHeaders = {}) {
     log('httpPost', `Response from ${path}`, { ok: r.ok, status: r.status, json });
     return { ok: r.ok, status: r.status, json };
   } catch (err) {
-    clearTimeout(timeoutId);
     log('httpPost', `Fetch error for ${path}`, { error: err.message, name: err.name });
-    
-    // Handle abort error specifically
-    if (err.name === 'AbortError') {
-      return { ok: false, status: 504, json: { error: 'timeout', message: 'PlayFab API request timed out' } };
-    }
-    
     throw err;
   }
 }

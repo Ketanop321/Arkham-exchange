@@ -28,37 +28,23 @@ async function callOpenRouter(messages, model, temperature = 0.2) {
   if (process.env.SITE_URL) headers['HTTP-Referer'] = process.env.SITE_URL;
   if (process.env.SITE_NAME) headers['X-Title'] = process.env.SITE_NAME;
 
-  // Add timeout to prevent Netlify function timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ 
+      model: model || process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free', 
+      messages, 
+      temperature 
+    }),
+  });
 
-  try {
-    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ 
-        model: model || process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free', 
-        messages, 
-        temperature 
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-  
-    if (!r.ok) {
-      const text = await r.text();
-      throw new Error(`OpenRouter error ${r.status}: ${text}`);
-    }
-    
-    const json = await r.json();
-    return json.choices?.[0]?.message?.content || '';
-  } catch (err) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      throw new Error('AI request timed out');
-    }
-    throw err;
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`OpenRouter error ${r.status}: ${text}`);
   }
+  
+  const json = await r.json();
+  return json.choices?.[0]?.message?.content || '';
 }
 
 function tryParseJSON(text) {

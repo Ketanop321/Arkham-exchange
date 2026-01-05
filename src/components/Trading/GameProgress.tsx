@@ -78,6 +78,7 @@ const GameProgress: React.FC = () => {
   });
   // PlayFab session is ensured on mount; no need to gate with a flag here
   const [claimedGoals, setClaimedGoals] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [gcBalance, setGcBalance] = useState(0);
   const [achievements, setAchievements] = useState<string[]>([]);
@@ -399,6 +400,8 @@ const GameProgress: React.FC = () => {
       setCareerTracks([]);
       setDailyGoals([]);
       setMarketSimulations([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -463,6 +466,18 @@ const GameProgress: React.FC = () => {
     }
     return `$${amount.toLocaleString()}`;
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="w-full h-full p-6 bg-black/90 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/60 mx-auto mb-4"></div>
+          <p className="text-white/60 font-mono">Loading Career Data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full p-6 bg-black/90">
