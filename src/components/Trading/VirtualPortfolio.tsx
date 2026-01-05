@@ -321,50 +321,9 @@ const VirtualPortfolio: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading assets:', error);
-      // Fallback data
-      const fallbackAssets: VirtualAsset[] = [
-        {
-          id: 'cr-bitcoin',
-          symbol: 'BTC',
-          name: 'Bitcoin',
-          type: 'crypto',
-          price: 90165,
-          change24h: 90165 * 0.02,
-          changePercent: 2.0,
-          marketCap: 1798943050715,
-          volume24h: 36159687825,
-          description: 'Bitcoin cryptocurrency',
-          riskScore: 9,
-        },
-        {
-          id: 'cr-ethereum',
-          symbol: 'ETH',
-          name: 'Ethereum',
-          type: 'crypto',
-          price: 3105.96,
-          change24h: 3105.96 * 0.015,
-          changePercent: 1.5,
-          marketCap: 374505207207,
-          volume24h: 12111905881,
-          description: 'Ethereum cryptocurrency',
-          riskScore: 8,
-        },
-        {
-          id: 'cr-solana',
-          symbol: 'SOL',
-          name: 'Solana',
-          type: 'crypto',
-          price: 132.57,
-          change24h: 132.57 * -0.01,
-          changePercent: -1.0,
-          marketCap: 74362416767,
-          volume24h: 2690779809,
-          description: 'Solana cryptocurrency',
-          riskScore: 7,
-        }
-      ];
-      setAvailableAssets(fallbackAssets);
-      setSelectedAsset(fallbackAssets[0]);
+      // No fallback - show empty state with error message
+      setAvailableAssets([]);
+      setSelectedAsset(null);
     }
   };
 
@@ -383,89 +342,12 @@ const VirtualPortfolio: React.FC = () => {
           }
         }
       } catch (e) {
-        console.warn('load portfolios from cloud failed, fallback to sample', e);
+        console.warn('load portfolios from cloud failed', e);
       }
-
-      const samplePortfolio: VirtualPortfolio = {
-        id: 'portfolio-1',
-        name: 'Crypto & Tech Portfolio',
-        description: 'Diversified portfolio with cryptocurrencies and tech stocks',
-        owner: 'You',
-        ownerAvatar: 'https://ui-avatars.com/api/?name=Trader&background=6366f1&color=fff',
-        totalValue: 156780.25,
-        totalPnL: 31245.75,
-        totalPnLPercent: 24.9,
-        positions: availableAssets.slice(0, 4).map((asset, index) => ({
-          assetId: asset.id,
-          symbol: asset.symbol,
-          quantity: [5, 10, 100, 50][index] || 25,
-          avgPrice: asset.price * 0.85,
-          currentPrice: asset.price,
-          value: asset.price * ([5, 10, 100, 50][index] || 25),
-          pnl: asset.price * ([5, 10, 100, 50][index] || 25) * 0.15,
-          pnlPercent: 15,
-          allocation: [30, 25, 25, 20][index] || 10
-        })),
-        performance: {
-          daily: 1.45,
-          weekly: 5.23,
-          monthly: 15.67,
-          yearly: 42.3,
-          maxDrawdown: -12.34,
-          sharpeRatio: 1.89,
-          winRate: 72.5
-        },
-        strategy: {
-          type: 'Growth & Diversification',
-          description: 'Mix of high-growth cryptocurrencies and stable tech stocks',
-          riskLevel: 'Medium',
-          timeHorizon: '2-3 years'
-        },
-        blockchain: {
-          hash: '0x1a2b3c4d5e6f7890abcdef1234567890',
-          version: 3,
-          verified: true,
-          createdAt: '2025-01-15T10:30:00Z',
-          lastUpdated: new Date().toISOString()
-        },
-        social: {
-          followers: 342,
-          copiers: 67,
-          likes: 245,
-          isPublic: true
-        },
-        reputation: {
-          score: 8.9,
-          badges: ['Crypto Expert', 'Risk Manager', 'Top Performer'],
-          rank: 'Advanced',
-          achievements: ['100% Return', 'Consistent Growth', 'Low Drawdown']
-        },
-        aiAnalysis: {
-          riskScore: 6.8,
-          diversificationScore: 8.2,
-          momentumScore: 7.9,
-          valueScore: 7.1,
-          recommendations: [
-            'Consider adding more defensive positions',
-            'Rebalance crypto allocation',
-            'Monitor tech sector volatility'
-          ]
-        }
-      };
-
-      const initial = [samplePortfolio];
-      setUserPortfolios(initial);
-      if (!selectedPortfolio) setSelectedPortfolio(samplePortfolio);
-      // Save sample to cloud so subsequent loads are persisted
-      try {
-        await fetch('/api/playfab/userdata', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: { portfolios: initial } }),
-        });
-      } catch (e) {
-        console.warn('saving sample portfolios failed', e);
-      }
+      // No cloud portfolios found - user needs to create one
+      // Don't set sample portfolio - start fresh
+      setUserPortfolios([]);
+      setSelectedPortfolio(null);
     }
   };
 

@@ -98,6 +98,8 @@ const SocialGraph: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showTokenGateModal, setShowTokenGateModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSocialData();
@@ -113,9 +115,11 @@ const SocialGraph: React.FC = () => {
   };
 
   const loadSocialData = async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch('/api/social/feed');
-      if (!res.ok) throw new Error(`status ${res.status}`);
+      if (!res.ok) throw new Error(`Failed to load social data (${res.status})`);
       const data = await res.json();
 
       const usersParsed: User[] = (Array.isArray(data.users) ? data.users : []).map((u: any, i: number) => ({
@@ -215,10 +219,13 @@ const SocialGraph: React.FC = () => {
       setCurrentUser(usersParsed[0] || null);
     } catch (e) {
       console.error('loadSocialData error', e);
+      setLoadError(e instanceof Error ? e.message : 'Failed to load social data');
       setUsers([]);
       setPosts([]);
       setLeaderboard([]);
       setCurrentUser(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -236,180 +243,7 @@ const SocialGraph: React.FC = () => {
     return arr.length ? arr : ['#markets', '#trading', '#finance', '#crypto'];
   })();
 
-  const initializeMockData = () => {
-    const mockUsers: User[] = [
-      {
-        id: 'user-1',
-        username: 'cryptoqueen',
-        displayName: 'Sarah Chen',
-        avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg',
-        bio: 'DeFi strategist | 5+ years trading | Building the future of finance',
-        verified: true,
-        reputation: {
-          score: 9.2,
-          rank: 'Diamond Trader',
-          badges: ['Early Adopter', 'DeFi Expert', 'Top Performer'],
-          level: 47
-        },
-        stats: {
-          followers: 12500,
-          following: 234,
-          totalReturn: 156.7,
-          winRate: 78.4,
-          portfolios: 8,
-          copiers: 1250
-        },
-        blockchain: {
-          walletAddress: '0x1234...5678',
-          nftProfile: 'NFT-PROFILE-001',
-          tokenGating: {
-            requiredTokens: 1000,
-            tokenType: 'ARKHAM',
-            hasAccess: true
-          }
-        },
-        social: {
-          isFollowing: false,
-          mutualFollowers: 23,
-          lastActive: '2025-01-20T15:30:00Z'
-        },
-        achievements: [
-          {
-            id: 'first-million',
-            name: 'First Million',
-            description: 'Reached $1M portfolio value',
-            icon: Crown,
-            rarity: 'Legendary',
-            unlockedAt: '2024-12-15T10:00:00Z',
-            nftTokenId: 'ACHIEVE-001'
-          },
-          {
-            id: 'defi-master',
-            name: 'DeFi Master',
-            description: 'Mastered DeFi protocols',
-            icon: Zap,
-            rarity: 'Epic',
-            unlockedAt: '2024-11-20T14:30:00Z',
-            nftTokenId: 'ACHIEVE-045'
-          }
-        ]
-      },
-      {
-        id: 'user-2',
-        username: 'quantwizard',
-        displayName: 'Alex Thompson',
-        avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-        bio: 'Quantitative analyst | AI trading systems | Math PhD',
-        verified: true,
-        reputation: {
-          score: 8.8,
-          rank: 'Platinum Trader',
-          badges: ['Quant Expert', 'AI Pioneer', 'Risk Manager'],
-          level: 42
-        },
-        stats: {
-          followers: 8900,
-          following: 156,
-          totalReturn: 89.3,
-          winRate: 82.1,
-          portfolios: 12,
-          copiers: 890
-        },
-        blockchain: {
-          walletAddress: '0x9876...4321',
-          tokenGating: {
-            requiredTokens: 500,
-            tokenType: 'ARKHAM',
-            hasAccess: true
-          }
-        },
-        social: {
-          isFollowing: true,
-          mutualFollowers: 45,
-          lastActive: '2025-01-20T14:15:00Z'
-        },
-        achievements: [
-          {
-            id: 'ai-pioneer',
-            name: 'AI Pioneer',
-            description: 'First to use AI trading',
-            icon: Target,
-            rarity: 'Epic',
-            unlockedAt: '2024-10-10T09:00:00Z'
-          }
-        ]
-      }
-    ];
-
-    const mockPosts: Post[] = [
-      {
-        id: 'post-1',
-        author: mockUsers[0],
-        content: 'Just hit a new milestone! My DeFi portfolio is up 45% this month. The key is diversification across multiple protocols and staying updated with governance changes. 🚀',
-        type: 'text',
-        timestamp: '2025-01-20T14:30:00Z',
-        engagement: {
-          likes: 234,
-          comments: 45,
-          shares: 23,
-          hasLiked: false
-        },
-        tokenGated: {
-          required: true,
-          tokenType: 'ARKHAM',
-          minTokens: 100
-        }
-      },
-      {
-        id: 'post-2',
-        author: mockUsers[1],
-        content: 'Sharing my latest AI momentum strategy. Backtested over 3 years with 78% win rate.',
-        type: 'portfolio-share',
-        timestamp: '2025-01-20T13:15:00Z',
-        engagement: {
-          likes: 189,
-          comments: 67,
-          shares: 34,
-          hasLiked: true
-        },
-        portfolio: {
-          id: 'portfolio-ai-momentum',
-          name: 'AI Momentum Strategy',
-          performance: 24.5,
-          value: 125430
-        }
-      },
-      {
-        id: 'post-3',
-        author: mockUsers[0],
-        content: 'Unlocked the "First Million" achievement! 🏆',
-        type: 'achievement',
-        timestamp: '2025-01-20T12:00:00Z',
-        engagement: {
-          likes: 567,
-          comments: 123,
-          shares: 89,
-          hasLiked: false
-        },
-        achievement: {
-          name: 'First Million',
-          rarity: 'Legendary',
-          nftTokenId: 'ACHIEVE-001'
-        }
-      }
-    ];
-
-    const mockLeaderboard: LeaderboardEntry[] = [
-      { rank: 1, user: mockUsers[0], metric: 156.7, change: 2.3 },
-      { rank: 2, user: mockUsers[1], metric: 89.3, change: -1.2 },
-      // Add more entries as needed
-    ];
-
-    setUsers(mockUsers);
-    setPosts(mockPosts);
-    setLeaderboard(mockLeaderboard);
-    setCurrentUser(mockUsers[0]); // Simulate current user
-  };
+  // Mock data function removed - using real API data only
 
   const followUser = (userId: string) => {
     setUsers(prev => prev.map(user => 
@@ -648,6 +482,37 @@ const SocialGraph: React.FC = () => {
       </div>
     </div>
   );
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="w-full h-full p-6 bg-black/90 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/60 mx-auto mb-4"></div>
+          <p className="text-white/60 font-mono">Loading Social Network...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (loadError && socialPosts.length === 0) {
+    return (
+      <div className="w-full h-full p-6 bg-black/90 flex items-center justify-center">
+        <div className="text-center glass-effect p-8 rounded-lg">
+          <div className="text-red-400 text-4xl mb-4">⚠️</div>
+          <h3 className="text-white text-xl mb-2 font-mono">Failed to Load</h3>
+          <p className="text-white/60 mb-4">{loadError}</p>
+          <button 
+            onClick={loadSocialData}
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full p-6 bg-black/90">
