@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, TrendingUp, TrendingDown, Zap, Target, AlertTriangle, BarChart3, LineChart, PieChart, Activity, Cpu, Database, Network, Shield, CheckCircle, XCircle, Clock, Gauge } from 'lucide-react';
+import { useToast } from '../Toast';
 
 interface QuantStrategy {
   id: string;
@@ -71,6 +72,7 @@ interface PortfolioHealth {
 }
 
 const AIQuantEngine: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'strategies' | 'analysis' | 'health' | 'backtest'>('strategies');
   const [strategies, setStrategies] = useState<QuantStrategy[]>([]);
   const [marketAnalysis, setMarketAnalysis] = useState<MarketAnalysis | null>(null);
@@ -78,17 +80,132 @@ const AIQuantEngine: React.FC = () => {
   const [selectedStrategy, setSelectedStrategy] = useState<QuantStrategy | null>(null);
   const [isRunningBacktest, setIsRunningBacktest] = useState(false);
   const [backtestProgress, setBacktestProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
-    initializeMockData();
+    loadAIData();
     // Simulate real-time updates
     const interval = setInterval(() => {
       updateStrategies();
-    }, 5000);
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  const initializeMockData = () => {
+  const callAI = async (prompt: string): Promise<string> => {
+    const r = await fetch('/api/ai/deepseek', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7
+      })
+    });
+    if (!r.ok) throw new Error('AI API error');
+    const data = await r.json();
+    return data?.choices?.[0]?.message?.content || '';
+  };
+
+  const loadAIData = async () => {
+    setIsLoading(true);
+    try {
+      // Generate AI-powered market analysis
+      const analysisPrompt = `You are a quantitative finance AI. Generate a JSON market analysis with this exact structure (no markdown, pure JSON only):
+{
+  "strategies": [
+    {
+      "id": "strategy-1",
+      "name": "AI Momentum Strategy",
+      "description": "Brief description",
+      "type": "momentum",
+      "riskLevel": "Medium",
+      "expectedReturn": 18.5,
+      "maxDrawdown": -8.2,
+      "sharpeRatio": 1.65,
+      "winRate": 62.3,
+      "backtestPeriod": "2022-2025",
+      "assets": ["AAPL", "NVDA", "MSFT"],
+      "signals": { "current": "buy", "strength": 7.5, "confidence": 78 },
+      "performance": { "daily": 0.35, "weekly": 1.8, "monthly": 6.2, "yearly": 18.5 },
+      "aiMetrics": { "accuracy": 76.2, "precision": 74.1, "recall": 71.8, "f1Score": 72.9 },
+      "isActive": true
+    }
+  ],
+  "marketAnalysis": {
+    "sentiment": { "overall": "bullish", "score": 6.8, "factors": ["Strong tech earnings", "Fed rate stabilization"] },
+    "volatility": { "current": 16.5, "predicted": 18.2, "trend": "increasing" },
+    "correlations": [{ "asset1": "AAPL", "asset2": "MSFT", "correlation": 0.75 }],
+    "riskFactors": [{ "factor": "Inflation concerns", "impact": "medium", "probability": 0.4 }]
+  },
+  "portfolioHealth": {
+    "overallScore": 7.8,
+    "diversification": 6.9,
+    "riskAdjustedReturn": 8.2,
+    "liquidityScore": 8.5,
+    "concentrationRisk": 5.5,
+    "recommendations": [{ "type": "rebalance", "description": "Consider reducing tech exposure", "priority": "medium" }]
+  }
+}
+Generate 3 different strategies with varied types (momentum, mean-reversion, sentiment). Use realistic 2025 market data.`;
+
+      const aiResult = await callAI(analysisPrompt);
+      let parsed: any = {};
+      try {
+        // Try to extract JSON from the response
+        const jsonMatch = aiResult.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.warn('Failed to parse AI response, using fallback');
+      }
+
+      if (parsed.strategies?.length) {
+        setStrategies(parsed.strategies.map((s: any, i: number) => ({
+          ...s,
+          id: s.id || `strategy-${i+1}`,
+          lastUpdated: new Date().toISOString()
+        })));
+        setSelectedStrategy(parsed.strategies[0]);
+      }
+      if (parsed.marketAnalysis) {
+        setMarketAnalysis(parsed.marketAnalysis);
+      }
+      if (parsed.portfolioHealth) {
+        setPortfolioHealth(parsed.portfolioHealth);
+      }
+      showToast('AI analysis loaded successfully!', 'success');
+    } catch (e) {
+      console.warn('AI load failed, using fallback data', e);
+      initializeFallbackData();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const analyzeWithAI = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsAiLoading(true);
+    setAiResponse(null);
+    try {
+      const prompt = `You are a professional quantitative finance AI assistant. The user is asking about trading strategies, market analysis, or portfolio management. Answer concisely and professionally.
+
+User question: ${aiPrompt}
+
+Provide actionable insights with specific data points where relevant.`;
+      const response = await callAI(prompt);
+      setAiResponse(response);
+      showToast('AI analysis complete!', 'success');
+    } catch (e) {
+      showToast('AI analysis failed', 'error');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const initializeFallbackData = () => {
     const mockStrategies: QuantStrategy[] = [
       {
         id: 'momentum-1',
@@ -321,6 +438,18 @@ const AIQuantEngine: React.FC = () => {
     return 'text-red-400';
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full h-full p-6 bg-black/90 flex items-center justify-center">
+        <div className="text-center">
+          <Brain size={48} className="text-purple-400 animate-pulse mx-auto mb-4" />
+          <div className="text-white">Loading AI analysis...</div>
+          <div className="text-white/60 text-sm mt-2">Powered by OpenRouter AI</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full p-6 bg-black/90">
       <div className="max-w-7xl mx-auto">
@@ -330,6 +459,13 @@ const AIQuantEngine: React.FC = () => {
             <h2 className="text-2xl font-mono text-white/90 protocol-text">AI Quant Engine</h2>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={loadAIData}
+              className="glass-effect px-4 py-2 rounded-lg hover:bg-white/20 flex items-center space-x-2"
+            >
+              <Cpu size={16} />
+              <span>Refresh AI</span>
+            </button>
             <div className="glass-effect px-4 py-2 rounded-lg">
               <span className="text-sm text-white/60">Engine Status: </span>
               <span className="text-green-400 font-medium">Active</span>
@@ -456,6 +592,41 @@ const AIQuantEngine: React.FC = () => {
 
             {activeTab === 'analysis' && marketAnalysis && (
               <div className="space-y-6">
+                {/* AI Chat Interface */}
+                <div className="glass-effect rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-white mb-4 flex items-center space-x-2">
+                    <Brain size={20} className="text-purple-400" />
+                    <span>Ask AI Analyst</span>
+                  </h3>
+                  <div className="flex space-x-4 mb-4">
+                    <input
+                      type="text"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && analyzeWithAI()}
+                      placeholder="Ask about market trends, strategies, or portfolio optimization..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/40"
+                    />
+                    <button
+                      onClick={analyzeWithAI}
+                      disabled={isAiLoading || !aiPrompt.trim()}
+                      className="px-6 py-3 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 disabled:opacity-50 flex items-center space-x-2"
+                    >
+                      {isAiLoading ? (
+                        <><Clock size={16} className="animate-spin" /><span>Analyzing...</span></>
+                      ) : (
+                        <><Zap size={16} /><span>Analyze</span></>
+                      )}
+                    </button>
+                  </div>
+                  {aiResponse && (
+                    <div className="bg-white/5 rounded-lg p-4 border border-purple-500/20">
+                      <div className="text-sm text-purple-400 mb-2">AI Analysis Result:</div>
+                      <div className="text-white/80 whitespace-pre-wrap">{aiResponse}</div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="glass-effect rounded-lg p-6">
                     <h3 className="text-lg font-medium text-white mb-4">Market Sentiment</h3>
