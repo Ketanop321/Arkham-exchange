@@ -54,10 +54,16 @@ const Exchange: React.FC = () => {
         body: JSON.stringify({ packId }),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok || j?.error) throw new Error(j?.error || `status ${r.status}`);
+      console.log('[Exchange] Response:', r.status, j);
+      if (!r.ok || j?.error) {
+        const errMsg = j?.message || j?.error || `status ${r.status}`;
+        const detail = j?.detail ? ` (${JSON.stringify(j.detail)})` : '';
+        throw new Error(`${errMsg}${detail}`);
+      }
       showToast('success', `+${j.grantGC || 0} GC purchased successfully! 🪙`);
       await fetchBalances();
     } catch (e: any) {
+      console.error('[Exchange] Purchase error:', e);
       showToast('error', `Purchase failed: ${e?.message || 'unknown error'}`);
     } finally { setLoading(false); }
   }
