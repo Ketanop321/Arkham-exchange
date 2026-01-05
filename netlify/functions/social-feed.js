@@ -20,7 +20,7 @@ function jsonResponse(statusCode, body) {
 async function callOpenRouter(messages, model, temperature = 0.2) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not set');
-  
+
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
@@ -31,10 +31,10 @@ async function callOpenRouter(messages, model, temperature = 0.2) {
   const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ 
-      model: model || process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free', 
-      messages, 
-      temperature 
+    body: JSON.stringify({
+      model: model || process.env.OPENROUTER_MODEL || 'xiaomi/mimo-v2-flash:free',
+      messages,
+      temperature
     }),
   });
 
@@ -42,7 +42,7 @@ async function callOpenRouter(messages, model, temperature = 0.2) {
     const text = await r.text();
     throw new Error(`OpenRouter error ${r.status}: ${text}`);
   }
-  
+
   const json = await r.json();
   return json.choices?.[0]?.message?.content || '';
 }
@@ -54,7 +54,7 @@ function tryParseJSON(text) {
     const first = text.indexOf('{');
     const last = text.lastIndexOf('}');
     if (first !== -1 && last !== -1 && last > first) {
-      try { return JSON.parse(text.slice(first, last + 1)); } catch (_) {}
+      try { return JSON.parse(text.slice(first, last + 1)); } catch (_) { }
     }
     return null;
   }
@@ -74,9 +74,10 @@ export async function handler(event, context) {
       role: 'system',
       content: 'You are a data generator for a social trading network. Output strictly valid JSON only. No markdown.'
     };
+    const seed = Date.now();
     const user = {
       role: 'user',
-      content: `Generate social trading data with this schema:
+      content: `Generate social trading data with this schema (seed=${seed} - use this to vary your output):
 {
   "users": [
     {
@@ -103,13 +104,14 @@ export async function handler(event, context) {
   ],
   "leaderboard": [ { "rank": number, "userId": string, "metric": number, "change": number } ]
 }
-Generate 3-4 users, 3-4 posts, 3 leaderboard entries. Realistic finance content. JSON only.`
+Generate 3-4 users, 3-4 posts, 3 leaderboard entries. Realistic finance content. Use different names/usernames each time. JSON only.`
     };
+
 
     console.log('[social-feed] Calling OpenRouter...');
     const content = await callOpenRouter([system, user]);
     console.log('[social-feed] Got response, parsing...');
-    
+
     const parsed = tryParseJSON(content);
     if (!parsed) {
       console.error('[social-feed] Failed to parse:', content.substring(0, 500));
@@ -119,7 +121,7 @@ Generate 3-4 users, 3-4 posts, 3 leaderboard entries. Realistic finance content.
     // Map authors to posts
     const users = ensureArray(parsed.users);
     const byId = new Map(users.map(u => [u.id, u]));
-    
+
     const posts = ensureArray(parsed.posts).map(p => ({
       ...p,
       author: byId.get(p.authorId) || users[0] || null

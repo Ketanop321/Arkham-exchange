@@ -92,5 +92,4 @@ export async function handler(event, context) {
       body: JSON.stringify({ ok: true, pfid: localPfid, existing: false, local: true, fallback: true }),
     };
   }
-  }
 }

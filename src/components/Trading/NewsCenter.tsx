@@ -54,6 +54,207 @@ interface NewsFilter {
   relevanceThreshold: number;
 }
 
+// AI Analysis Panel Component - Uses OpenRouter for real AI analysis
+const AIAnalysisPanel: React.FC<{ articles: NewsArticle[] }> = ({ articles }) => {
+  const [analysis, setAnalysis] = useState<{
+    marketOverview: string;
+    keyInsights: string[];
+    tradingSignals: { asset: string; signal: string; confidence: number; reason: string }[];
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const generateAnalysis = async () => {
+    if (articles.length === 0) {
+      setError('No articles to analyze. Load some news first.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const headlines = articles.slice(0, 10).map(a => `- ${a.title} (${a.source})`).join('\n');
+
+      const response = await fetch('/api/ai-deepseek', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a financial analyst. Analyze news headlines and provide market insights. Return valid JSON only. No markdown.'
+            },
+            {
+              role: 'user',
+              content: `Analyze these market news headlines and generate trading insights:\n\n${headlines}\n\nReturn JSON with this exact structure:\n{\n  "marketOverview": "2-3 sentence market summary",\n  "keyInsights": ["insight 1", "insight 2", "insight 3"],\n  "tradingSignals": [\n    {"asset": "symbol", "signal": "buy|sell|hold", "confidence": 0-100, "reason": "brief reason"}\n  ]\n}\n\nProvide 3-5 trading signals for major assets like BTC, ETH, AAPL, MSFT, etc. JSON only, no markdown.`
+            }
+          ],
+          temperature: 0.3
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      // Parse JSON from response
+      let parsed;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        // Try to extract JSON from response
+        const firstBrace = content.indexOf('{');
+        const lastBrace = content.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          parsed = JSON.parse(content.slice(firstBrace, lastBrace + 1));
+        } else {
+          throw new Error('Could not parse AI response');
+        }
+      }
+
+      setAnalysis({
+        marketOverview: parsed.marketOverview || 'Market analysis unavailable',
+        keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
+        tradingSignals: Array.isArray(parsed.tradingSignals) ? parsed.tradingSignals : []
+      });
+    } catch (e) {
+      console.error('AI analysis error:', e);
+      setError(e instanceof Error ? e.message : 'Failed to generate analysis');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (articles.length > 0 && !analysis && !loading) {
+      generateAnalysis();
+    }
+  }, [articles.length]);
+
+  const getSignalColor = (signal: string) => {
+    switch (signal.toLowerCase()) {
+      case 'buy': return 'text-green-400 bg-green-400/20';
+      case 'sell': return 'text-red-400 bg-red-400/20';
+      default: return 'text-yellow-400 bg-yellow-400/20';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="glass-effect rounded-lg p-12 text-center">
+        <Loader size={48} className="mx-auto text-white/60 animate-spin mb-4" />
+        <h3 className="text-xl font-medium text-white mb-2">Analyzing Market News...</h3>
+        <p className="text-white/60">AI is processing the latest headlines</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="glass-effect rounded-lg p-12 text-center">
+        <AlertTriangle size={48} className="mx-auto text-red-400 mb-4" />
+        <h3 className="text-xl font-medium text-white mb-2">Analysis Failed</h3>
+        <p className="text-white/60 mb-4">{error}</p>
+        <button
+          onClick={generateAnalysis}
+          className="px-6 py-2 bg-white/10 rounded-lg hover:bg-white/20 text-white"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="glass-effect rounded-lg p-12 text-center">
+        <Activity size={48} className="mx-auto text-white/40 mb-4" />
+        <h3 className="text-xl font-medium text-white mb-2">AI Market Analysis</h3>
+        <p className="text-white/60 mb-4">Get AI-powered insights from the latest market news</p>
+        <button
+          onClick={generateAnalysis}
+          className="px-6 py-2 bg-white/10 rounded-lg hover:bg-white/20 text-white"
+        >
+          Generate Analysis
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Market Overview */}
+      <div className="glass-effect rounded-lg p-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <Activity size={24} className="text-blue-400" />
+          <h3 className="text-lg font-medium text-white">Market Overview</h3>
+          <button onClick={generateAnalysis} className="ml-auto px-3 py-1 bg-white/10 rounded hover:bg-white/20 text-sm">
+            Refresh
+          </button>
+        </div>
+        <p className="text-white/80 leading-relaxed">{analysis.marketOverview}</p>
+      </div>
+
+      {/* Key Insights */}
+      <div className="glass-effect rounded-lg p-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <Zap size={24} className="text-yellow-400" />
+          <h3 className="text-lg font-medium text-white">Key Insights</h3>
+        </div>
+        <div className="space-y-3">
+          {analysis.keyInsights.map((insight, index) => (
+            <div key={index} className="flex items-start space-x-3 p-3 bg-white/5 rounded-lg">
+              <div className="w-6 h-6 rounded-full bg-yellow-400/20 flex items-center justify-center text-yellow-400 text-sm font-medium">
+                {index + 1}
+              </div>
+              <p className="text-white/80 flex-1">{insight}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Trading Signals */}
+      <div className="glass-effect rounded-lg p-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <Target size={24} className="text-green-400" />
+          <h3 className="text-lg font-medium text-white">AI Trading Signals</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {analysis.tradingSignals.map((signal, index) => (
+            <div key={index} className="p-4 bg-white/5 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white font-medium text-lg">{signal.asset}</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getSignalColor(signal.signal)}`}>
+                  {signal.signal.toUpperCase()}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${signal.signal === 'buy' ? 'bg-green-400' : signal.signal === 'sell' ? 'bg-red-400' : 'bg-yellow-400'}`}
+                    style={{ width: `${signal.confidence}%` }}
+                  />
+                </div>
+                <span className="text-white/60 text-sm">{signal.confidence}%</span>
+              </div>
+              <p className="text-white/60 text-sm">{signal.reason}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 p-3 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
+          <p className="text-yellow-400/80 text-sm flex items-center">
+            <AlertTriangle size={16} className="mr-2" />
+            AI signals are for educational purposes only. Always do your own research before trading.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const NewsCenter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'news' | 'alerts' | 'analysis' | 'watchlist'>('news');
   const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -81,15 +282,15 @@ const NewsCenter: React.FC = () => {
     try {
       // Use your working API endpoint
       const res = await fetch('/api/news?q=markets%20OR%20stocks%20OR%20technology%20OR%20crypto%20OR%20real%20estate%20OR%20venture%20capital&limit=40');
-      
+
       if (!res.ok) throw new Error(`API returned status ${res.status}`);
-      
+
       const data = await res.json();
-      
+
       if (!data.articles || data.articles.length === 0) {
         throw new Error('No articles returned from API');
       }
-      
+
       const mapped: NewsArticle[] = data.articles.map((a: any, i: number) => ({
         id: a.id || a.url || `news-${i}`,
         title: a.title || 'Untitled',
@@ -119,7 +320,7 @@ const NewsCenter: React.FC = () => {
           timestamp: a.publishedAt || '',
         },
       }));
-      
+
       setArticles(mapped);
       setAlerts([]);
       setLoading(false);
@@ -134,18 +335,18 @@ const NewsCenter: React.FC = () => {
 
   const filteredArticles = articles.filter(article => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         article.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+      article.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
     const matchesCategory = filters.category === 'all' || article.category === filters.category;
     const matchesImpact = filters.impact === 'all' || article.impact === filters.impact;
     const matchesRelevance = article.relevanceScore >= filters.relevanceThreshold;
-    
+
     const now = new Date();
     const articleDate = new Date(article.publishedAt);
     const timeDiff = now.getTime() - articleDate.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
-    
+
     let matchesTime = true;
     switch (filters.timeframe) {
       case '1h':
@@ -161,7 +362,7 @@ const NewsCenter: React.FC = () => {
         matchesTime = hoursDiff <= 720;
         break;
     }
-    
+
     return matchesSearch && matchesCategory && matchesImpact && matchesRelevance && matchesTime;
   });
 
@@ -232,7 +433,7 @@ const NewsCenter: React.FC = () => {
   };
 
   const markAlertAsRead = (alertId: string) => {
-    setAlerts(prev => prev.map(alert => 
+    setAlerts(prev => prev.map(alert =>
       alert.id === alertId ? { ...alert, isRead: true } : alert
     ));
   };
@@ -260,33 +461,29 @@ const NewsCenter: React.FC = () => {
         <div className="flex items-center space-x-4 mb-6">
           <button
             onClick={() => setActiveTab('news')}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === 'news' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
-            }`}
+            className={`px-4 py-2 rounded-lg ${activeTab === 'news' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
+              }`}
           >
             Latest News
           </button>
           <button
             onClick={() => setActiveTab('alerts')}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === 'alerts' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
-            }`}
+            className={`px-4 py-2 rounded-lg ${activeTab === 'alerts' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
+              }`}
           >
             Market Alerts
           </button>
           <button
             onClick={() => setActiveTab('analysis')}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === 'analysis' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
-            }`}
+            className={`px-4 py-2 rounded-lg ${activeTab === 'analysis' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
+              }`}
           >
             AI Analysis
           </button>
           <button
             onClick={() => setActiveTab('watchlist')}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === 'watchlist' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
-            }`}
+            className={`px-4 py-2 rounded-lg ${activeTab === 'watchlist' ? 'bg-white/20 text-white' : 'text-white/60 hover:bg-white/10'
+              }`}
           >
             Watchlist
           </button>
@@ -376,10 +573,10 @@ const NewsCenter: React.FC = () => {
                   const CategoryIcon = getCategoryIcon(article.category);
                   const ImpactIcon = getImpactIcon(article.impact);
                   const isBookmarked = bookmarkedArticles.has(article.id);
-                  
+
                   return (
                     <div key={article.id} className="glass-effect rounded-lg p-6 hover:bg-white/5 transition-all cursor-pointer"
-                         onClick={() => setSelectedArticle(article)}>
+                      onClick={() => setSelectedArticle(article)}>
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center space-x-3">
                           <div className={`p-2 rounded-lg ${getCategoryColor(article.category)}`}>
@@ -497,11 +694,7 @@ const NewsCenter: React.FC = () => {
         )}
 
         {activeTab === 'analysis' && (
-          <div className="glass-effect rounded-lg p-12 text-center">
-            <Activity size={48} className="mx-auto text-white/40 mb-4" />
-            <h3 className="text-xl font-medium text-white mb-2">AI Analysis Coming Soon</h3>
-            <p className="text-white/60">DeepSeek-powered article summaries and trading signals will be available soon</p>
-          </div>
+          <AIAnalysisPanel articles={articles} />
         )}
 
         {activeTab === 'watchlist' && (
@@ -570,9 +763,8 @@ const NewsCenter: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => toggleBookmark(selectedArticle.id)}
-                  className={`p-2 hover:bg-white/10 rounded ${
-                    bookmarkedArticles.has(selectedArticle.id) ? 'text-yellow-400' : 'text-white/60'
-                  }`}
+                  className={`p-2 hover:bg-white/10 rounded ${bookmarkedArticles.has(selectedArticle.id) ? 'text-yellow-400' : 'text-white/60'
+                    }`}
                 >
                   <Bookmark size={20} fill={bookmarkedArticles.has(selectedArticle.id) ? 'currentColor' : 'none'} />
                 </button>
