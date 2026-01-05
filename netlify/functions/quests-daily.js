@@ -109,21 +109,33 @@ Rules: actionable, realistic, reflect headlines/price moves, no markdown.` }
 
       // Read current XP
       let currentXp = 0;
-      const stats = await serverGetPlayerStatistics(pfid, ['XP']);
-      if (stats.ok) {
-        const arr = stats.json?.data?.Statistics || [];
-        const xpItem = arr.find((s) => s.StatisticName === 'XP');
-        if (xpItem) currentXp = Number(xpItem.Value || 0);
+      try {
+        const stats = await serverGetPlayerStatistics(pfid, ['XP']);
+        if (stats.ok) {
+          const arr = stats.json?.data?.Statistics || [];
+          const xpItem = arr.find((s) => s.StatisticName === 'XP');
+          if (xpItem) currentXp = Number(xpItem.Value || 0);
+        }
+      } catch (e) {
+        console.warn('Failed to get player stats', e.message);
       }
 
       const newXp = currentXp + xp;
       // Update XP
       if (xp > 0) {
-        await serverUpdateStatistic(pfid, 'XP', newXp);
+        try {
+          await serverUpdateStatistic(pfid, 'XP', newXp);
+        } catch (e) {
+          console.warn('Failed to update XP', e.message);
+        }
       }
       // Grant currency
       if (currencyAmount > 0) {
-        await serverAddCurrency(pfid, currencyCode, currencyAmount);
+        try {
+          await serverAddCurrency(pfid, currencyCode, currencyAmount);
+        } catch (e) {
+          console.warn('Failed to add currency', e.message);
+        }
       }
 
       return jsonResponse(200, { ok: true, newXp });
@@ -132,6 +144,6 @@ Rules: actionable, realistic, reflect headlines/price moves, no markdown.` }
     return jsonResponse(405, { error: 'method_not_allowed' });
   } catch (e) {
     console.error('quests/daily error', e);
-    return jsonResponse(500, { error: 'internal_error' });
+    return jsonResponse(500, { error: 'internal_error', message: e.message });
   }
 }

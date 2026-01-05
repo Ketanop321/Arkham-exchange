@@ -75,7 +75,7 @@ const AIAnalysisPanel: React.FC<{ articles: NewsArticle[] }> = ({ articles }) =>
     try {
       const headlines = articles.slice(0, 10).map(a => `- ${a.title} (${a.source})`).join('\n');
 
-      const response = await fetch('/api/ai-deepseek', {
+      const response = await fetch('/api/ai/deepseek', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

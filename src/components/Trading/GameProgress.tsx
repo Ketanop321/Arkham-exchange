@@ -342,7 +342,9 @@ const GameProgress: React.FC = () => {
 
   const loadCareerData = async () => {
     try {
-      const res = await fetch('/api/career/tracks?level=Intermediate');
+      // Add cache-busting timestamp for fresh data
+      const timestamp = Date.now();
+      const res = await fetch(`/api/career/tracks?level=Intermediate&_t=${timestamp}`);
       if (!res.ok) throw new Error(`status ${res.status}`);
       const data = await res.json();
 

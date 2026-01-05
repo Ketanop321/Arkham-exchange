@@ -54,6 +54,12 @@
   to = "/.netlify/functions/ai-deepseek"
   status = 200
 
+# Legacy path support
+[[redirects]]
+  from = "/api/ai-deepseek"
+  to = "/.netlify/functions/ai-deepseek"
+  status = 200
+
 [[redirects]]
   from = "/api/career/tracks"
   to = "/.netlify/functions/career-tracks"
