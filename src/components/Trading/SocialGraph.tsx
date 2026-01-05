@@ -496,7 +496,7 @@ const SocialGraph: React.FC = () => {
   }
 
   // Show error state
-  if (loadError && socialPosts.length === 0) {
+  if (loadError && posts.length === 0) {
     return (
       <div className="w-full h-full p-6 bg-black/90 flex items-center justify-center">
         <div className="text-center glass-effect p-8 rounded-lg">
